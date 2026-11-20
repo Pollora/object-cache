@@ -55,3 +55,14 @@ it('does not read a wildcard in the middle of a name', function (): void {
     expect($groups->isGlobal('axb'))->toBeFalse()
         ->and($groups->isGlobal('a*b'))->toBeTrue();
 });
+
+it('accepts a group named like a number, which PHP turns into an integer key', function (): void {
+    $groups = new GroupRegistry;
+    $groups->addGlobal('7');
+    $groups->addNonPersistent(['8', 'wc_*']);
+
+    expect($groups->isGlobal('7'))->toBeTrue()
+        ->and($groups->isNonPersistent('8'))->toBeTrue()
+        ->and($groups->isNonPersistent('wc_orders'))->toBeTrue()
+        ->and($groups->isGlobal('9'))->toBeFalse();
+});

@@ -1,4 +1,21 @@
 {
     "version": 1,
-    "surface": []
+    "surface": {
+        "command:pollora:object-cache:disable": "command",
+        "command:pollora:object-cache:enable": "command",
+        "command:pollora:object-cache:flush": "command",
+        "command:pollora:object-cache:status": "command",
+        "config:object-cache.allowed_classes": "key",
+        "config:object-cache.connection": "key",
+        "config:object-cache.global_groups": "key",
+        "config:object-cache.max_ttl": "key",
+        "config:object-cache.non_persistent_groups": "key",
+        "config:object-cache.prefix": "key",
+        "config:object-cache.redis": "key",
+        "config:object-cache.redis.connect_timeout": "key",
+        "config:object-cache.redis.database": "key",
+        "config:object-cache.redis.persistent": "key",
+        "config:object-cache.redis.read_timeout": "key",
+        "config:object-cache.serializer": "key"
+    }
 }
