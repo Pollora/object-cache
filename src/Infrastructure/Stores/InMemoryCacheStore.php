@@ -120,7 +120,10 @@ final class InMemoryCacheStore implements CacheStore
 
         $current = $this->entries[$key]['value'];
         $next = (is_int($current) || is_float($current) || (is_string($current) && is_numeric($current)) ? $current : 0) + $delta;
-        $next = max(0, $next);
+
+        if ($next < 0) {
+            $next = 0;
+        }
 
         $this->entries[$key]['value'] = $next;
 
