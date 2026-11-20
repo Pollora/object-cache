@@ -1,0 +1,10 @@
+{
+    "profile": "integration",
+    "mode": "observe",
+    "ratchet": {
+        "phpstan_level": 5,
+        "phpstan_baseline": 0,
+        "coverage": 100,
+        "msi": 94.7
+    }
+}
