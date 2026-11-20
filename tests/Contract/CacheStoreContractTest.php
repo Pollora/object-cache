@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use Pollora\ObjectCache\Domain\CacheValue;
+use Pollora\ObjectCache\Infrastructure\Redis\ValueCodec;
 use Pollora\ObjectCache\Tests\Support\InMemoryHarness;
+use Pollora\ObjectCache\Tests\Support\RedisHarness;
 use Pollora\ObjectCache\Tests\Support\StoreHarness;
 
 /*
@@ -12,6 +14,8 @@ use Pollora\ObjectCache\Tests\Support\StoreHarness;
  */
 dataset('store harnesses', [
     'in-memory' => fn () => new InMemoryHarness,
+    'redis' => fn () => new RedisHarness,
+    'redis (igbinary)' => fn () => new RedisHarness(ValueCodec::SERIALIZER_IGBINARY),
 ]);
 
 dataset('round-trip values', [
@@ -27,6 +31,25 @@ dataset('round-trip values', [
     'null' => [null],
     'true' => [true],
     'nested array' => [['a' => [1, 2, ['b' => null]], 'c' => false]],
+    'empty array' => [[]],
+    'max int' => [PHP_INT_MAX],
+    'min int' => [PHP_INT_MIN],
+    'whole float' => [2.0],
+    'negative float' => [-0.5],
+    'tiny float' => [1.0E-10],
+    'infinity' => [INF],
+    'exponent string' => ['1e3'],
+    'padded string' => [' 5'],
+    'signed string' => ['+5'],
+    'hex string' => ['0x1A'],
+    'inf string' => ['inf'],
+    'integer-like text' => ['-12'],
+    'tag-like string' => ['s:5'],
+    'tag-like float string' => ['d:1.5'],
+    'tag-like object string' => ['x:p:a:0:{}'],
+    'string with a null byte' => ["a\0b"],
+    'long string' => [str_repeat('é', 100_000)],
+    'unicode string' => ['héllo wörld ✓'],
 ]);
 
 it('returns a value exactly as it was stored', function (mixed $value, StoreHarness $harness): void {
@@ -178,6 +201,41 @@ it('adds to a numeric string and to a float', function (StoreHarness $harness): 
     expect($store->adjust('s', 1))->toBe(6)
         ->and($store->adjust('f', 1))->toBe(2.5);
 })->with('store harnesses');
+
+it('adjusts numbers the way PHP adds them', function (mixed $initial, int $delta, mixed $expected, StoreHarness $harness): void {
+    $store = $harness->store();
+    $store->set('n', $initial, 0);
+
+    $result = $store->adjust('n', $delta);
+
+    expect($result)->toBe($expected)
+        ->and($store->get('n')->value)->toBe($expected);
+})->with([
+    'a numeric string stays an int' => ['5', 1, 6],
+    'a string with a leading space' => [' 5', 1, 6],
+    'a string with a trailing space' => ['5 ', 1, 6],
+    'a string with a plus' => ['+5', 1, 6],
+    'a negative string' => ['-5', 10, 5],
+    'a string with leading zeros' => ['007', 1, 8],
+    'a decimal string is a float' => ['1.5', 1, 2.5],
+    'a leading-dot string is a float' => ['.5', 1, 1.5],
+    'an exponent string is a float' => ['1e3', 1, 1001.0],
+    'a float stays a float' => [1.5, 1, 2.5],
+    'a whole float stays a float' => [2.0, 1, 3.0],
+    'a float floors at zero' => [1.5, -10, 0],
+    'a hex string is not a number' => ['0x1A', 3, 3],
+    'inf is not a number' => ['inf', 3, 3],
+    'text is not a number' => ['abc', -3, 0],
+    'an empty string is not a number' => ['', 2, 2],
+    'a boolean is not a number' => [true, 2, 2],
+    'null is not a number' => [null, 2, 2],
+    'an array is not a number' => [[1], 2, 2],
+    'max int minus one' => [PHP_INT_MAX, -1, PHP_INT_MAX - 1],
+    'min int plus one' => [PHP_INT_MIN, 1, 0],
+    'max int overflows to a float' => [PHP_INT_MAX, 1, PHP_INT_MAX + 1],
+    'a huge numeric string is a float' => ['99999999999999999999', 1, 1.0E+20],
+    'an exact integer string at the limit' => ['9223372036854775806', 1, PHP_INT_MAX],
+])->with('store harnesses');
 
 it('keeps the expiry of a number it adjusts', function (StoreHarness $harness): void {
     $store = $harness->store();
