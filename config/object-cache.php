@@ -1,0 +1,53 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+|--------------------------------------------------------------------------
+| Pollora Object Cache
+|--------------------------------------------------------------------------
+|
+| Merged under `pollora.object-cache`. The connection parameters are read from
+| Laravel's `database.redis.<connection>`; only the keys below are specific to
+| the object cache.
+|
+*/
+return [
+    /*
+     * The `database.redis` connection to take host, port, credentials and
+     * database from. `default` and not `cache`: Laravel's cache store flushes
+     * its whole database on `cache:clear`, and the object cache must not share
+     * a database with it unless you want one to empty the other.
+     */
+    'connection' => env('OBJECT_CACHE_REDIS_CONNECTION', 'default'),
+
+    'redis' => [
+        // A database of its own, when the connection's one is shared with something else.
+        'database' => env('OBJECT_CACHE_REDIS_DATABASE'),
+        // Seconds. Without a limit phpredis waits for the PHP socket timeout (60 s) when Redis stops answering.
+        'connect_timeout' => (float) env('OBJECT_CACHE_CONNECT_TIMEOUT', 1.0),
+        'read_timeout' => (float) env('OBJECT_CACHE_READ_TIMEOUT', 1.0),
+        'persistent' => (bool) env('OBJECT_CACHE_PERSISTENT', false),
+    ],
+
+    /*
+     * Identifies the site on a shared Redis, so two sites never read each
+     * other's keys and a flush only empties this one. Left empty, it is derived
+     * from the site URL, the database name and the table prefix, or taken from
+     * WP_CACHE_KEY_SALT when the project defines it.
+     */
+    'prefix' => env('OBJECT_CACHE_PREFIX'),
+
+    // How arrays and objects are written: `php` or `igbinary`.
+    'serializer' => env('OBJECT_CACHE_SERIALIZER', 'php'),
+
+    // Classes `unserialize()` may rebuild: true for any (plugins cache objects of their own), false for none, or a list of class names.
+    'allowed_classes' => true,
+
+    // The longest life of an entry, in seconds; 0 sets no limit.
+    'max_ttl' => (int) env('OBJECT_CACHE_MAX_TTL', 0),
+
+    // Groups shared by every site of a network, and groups kept out of Redis. A name may end with `*`.
+    'global_groups' => [],
+    'non_persistent_groups' => [],
+];

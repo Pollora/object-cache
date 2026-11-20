@@ -70,6 +70,8 @@ final class GroupRegistry
         }
 
         foreach (array_keys($registered) as $name) {
+            $name = (string) $name;
+
             if (str_ends_with($name, '*') && str_starts_with($group, substr($name, 0, -1))) {
                 return true;
             }

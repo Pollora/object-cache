@@ -1,6 +1,13 @@
 includes:
     - vendor/pollora/harness/presets/phpstan/base.neon
+
 parameters:
     level: 5
     paths:
         - src
+    # The WordPress stubs are only read, not run: Testbench installs laravel/framework, whose helpers
+    # already declare __() and friends, and running the stubs after them is a fatal "Cannot redeclare".
+    bootstrapFiles!:
+        - vendor/szepeviktor/phpstan-wordpress/bootstrap.php
+    scanFiles:
+        - vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
