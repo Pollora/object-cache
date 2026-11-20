@@ -43,11 +43,14 @@ abstract class FeatureTestCase extends TestCase
 
     protected function tearDown(): void
     {
-        foreach (glob($this->contentDir.'/*') ?: [] as $file) {
-            unlink($file);
-        }
+        // Never glob an empty path: '/*' would be the root of the disk.
+        if ($this->contentDir !== '' && is_dir($this->contentDir)) {
+            foreach (glob($this->contentDir.'/*') ?: [] as $file) {
+                unlink($file);
+            }
 
-        rmdir($this->contentDir);
+            rmdir($this->contentDir);
+        }
 
         parent::tearDown();
     }
