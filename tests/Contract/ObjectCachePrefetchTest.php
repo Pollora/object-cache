@@ -9,6 +9,7 @@ use Pollora\ObjectCache\Domain\Prefetch\PrefetchPlan;
 use Pollora\ObjectCache\Infrastructure\Stores\InMemoryCacheStore;
 use Pollora\ObjectCache\Tests\Support\Caches;
 use Pollora\ObjectCache\Tests\Support\CountingStore;
+use Pollora\ObjectCache\Tests\Support\FlakyStore;
 use Pollora\ObjectCache\Tests\Support\FrozenClock;
 use Pollora\ObjectCache\Tests\Support\InMemoryHarness;
 use Pollora\ObjectCache\Tests\Support\RedisHarness;
@@ -313,4 +314,29 @@ it('leaves out a value holding an object whose class is not loaded yet', functio
 
     expect($afterPlain)->toBe(1)
         ->and($store->gets)->toBe(2);
+});
+
+it('does not fail when the profile cannot be written, and degrades', function (): void {
+    $store = new FlakyStore(new InMemoryCacheStore);
+    (Caches::make($store))->set('1', 'v', 'posts');
+
+    $request = Caches::make($store, prefetch: new PrefetchPlan('front:1:shop', 50, 3600));
+    $request->get('1', 'posts');
+    $store->failWrites = true;
+    $request->savePrefetch(true);
+
+    expect($request->isDegraded())->toBeTrue();
+});
+
+it('does not try to prefetch once a write has failed before the first read', function (): void {
+    $store = new FlakyStore(new InMemoryCacheStore);
+    $store->failWrites = true;
+    $request = Caches::make($store, prefetch: new PrefetchPlan('front:1:shop', 50, 3600));
+
+    $request->set('1', 'v', 'posts');
+    $found = $request->get('1', 'posts');
+
+    expect($request->isDegraded())->toBeTrue()
+        ->and($found?->value)->toBe('v')
+        ->and($store->getManys)->toBe(0);
 });
