@@ -66,3 +66,11 @@ it('moves a frozen clock only when told to', function (): void {
 
     expect($clock->now())->toBe(105);
 });
+
+it('floors a number at zero, and keeps a result of exactly minus one out', function (): void {
+    $store = new InMemoryCacheStore;
+    $store->set('n', 3, 0);
+
+    expect($store->adjust('n', -4))->toBe(0)
+        ->and($store->get('n')?->value)->toBe(0);
+});

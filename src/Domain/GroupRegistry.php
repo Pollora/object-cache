@@ -14,13 +14,13 @@ namespace Pollora\ObjectCache\Domain;
  */
 final class GroupRegistry
 {
-    /** @var array<string, true> */
+    /** @var array<string, null> */
     private array $global = [];
 
-    /** @var array<string, true> */
+    /** @var array<string, null> */
     private array $nonPersistent = [];
 
-    /** @var array<string, true> */
+    /** @var array<string, null> */
     private array $nonPrefetchable = [];
 
     /**
@@ -31,7 +31,7 @@ final class GroupRegistry
     public function addGlobal(string|array $groups): void
     {
         foreach ((array) $groups as $group) {
-            $this->global[$group] = true;
+            $this->global[$group] = null;
         }
     }
 
@@ -43,7 +43,7 @@ final class GroupRegistry
     public function addNonPersistent(string|array $groups): void
     {
         foreach ((array) $groups as $group) {
-            $this->nonPersistent[$group] = true;
+            $this->nonPersistent[$group] = null;
         }
     }
 
@@ -56,7 +56,7 @@ final class GroupRegistry
     public function addNonPrefetchable(string|array $groups): void
     {
         foreach ((array) $groups as $group) {
-            $this->nonPrefetchable[$group] = true;
+            $this->nonPrefetchable[$group] = null;
         }
     }
 
@@ -85,11 +85,11 @@ final class GroupRegistry
     }
 
     /**
-     * @param  array<string, true>  $registered
+     * @param  array<string, null>  $registered
      */
     private static function matches(array $registered, string $group): bool
     {
-        if (isset($registered[$group])) {
+        if (array_key_exists($group, $registered)) {
             return true;
         }
 

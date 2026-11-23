@@ -200,3 +200,119 @@ it('warns that reset() is deprecated, and empties the request cache', function (
 it('exposes the engine behind it', function (): void {
     expect($this->cache->engine()->isDegraded())->toBeFalse();
 });
+
+it('takes the lifetime and the offset as numbers WordPress passes as text', function (): void {
+    expect($this->cache->add('a', 1, 'group', '10'))->toBeTrue()
+        ->and($this->cache->replace('a', 2, 'group', '10'))->toBeTrue()
+        ->and($this->cache->set('a', 3, 'group', '10'))->toBeTrue()
+        ->and($this->cache->incr('a', '2', 'group'))->toBe(5);
+});
+
+it('takes the force flag as text', function (): void {
+    $this->cache->set('a', 1, 'group');
+
+    expect($this->cache->get('a', 'group', '1'))->toBe(1);
+});
+
+it('checks every key of a multiple read, and accepts a single key', function (): void {
+    $reports = 0;
+    Functions\when('_doing_it_wrong')->alias(function () use (&$reports): void {
+        $reports++;
+    });
+
+    $this->cache->set('a', 1, 'group');
+
+    expect($this->cache->get_multiple(['', 'a'], 'group'))->toBe(['' => false, 'a' => 1])
+        ->and($reports)->toBe(1)
+        ->and($this->cache->get_multiple('a', 'group'))->toBe(['a' => 1])
+        ->and($reports)->toBe(1);
+});
+
+it('counts the hits and the misses of a multiple read', function (): void {
+    $this->cache->set('a', 1, 'group');
+    $this->cache->get_multiple(['a', 'absent'], 'group');
+
+    expect($this->cache->cache_hits)->toBe(1)
+        ->and($this->cache->cache_misses)->toBe(1);
+});
+
+it('shares the global groups between the blogs of a network', function (): void {
+    $cache = new WordPressObjectCache(Caches::make(new InMemoryCacheStore, multisite: true));
+    $cache->add_global_groups(['shared', ['nested'], 'other']);
+    $cache->set('k', 'v', 'shared');
+    $cache->set('k', 'v', 'local');
+    $cache->switch_to_blog(2);
+
+    expect($cache->get('k', 'shared'))->toBe('v')
+        ->and($cache->get('k', 'local'))->toBeFalse();
+});
+
+it('registers the groups it is given as text, one by one, without a warning', function (): void {
+    $cache = new WordPressObjectCache(Caches::make(new InMemoryCacheStore, multisite: true));
+
+    set_error_handler(static function (int $level, string $message): never {
+        throw new ErrorException($message, 0, $level);
+    });
+
+    try {
+        $cache->add_global_groups(['a', ['nested'], null, 'b']);
+        $cache->add_non_persistent_groups(['c', ['nested'], null]);
+    } finally {
+        restore_error_handler();
+    }
+
+    $cache->set('k', 'v', 'a');
+    $cache->set('k', 'v', 'b');
+    $cache->switch_to_blog(2);
+
+    expect($cache->get('k', 'a'))->toBe('v')
+        ->and($cache->get('k', 'b'))->toBe('v');
+});
+
+it('says which features of the object cache API it has', function (): void {
+    expect($this->cache->supports('flush_group'))->toBeTrue()
+        ->and($this->cache->supports('add_multiple'))->toBeTrue()
+        ->and($this->cache->supports('something_else'))->toBeFalse();
+});
+
+it('adds nothing while WordPress suspends additions', function (): void {
+    Functions\when('wp_suspend_cache_addition')->justReturn(true);
+
+    expect($this->cache->add('a', 1, 'group'))->toBeFalse();
+
+    Functions\when('wp_suspend_cache_addition')->justReturn(false);
+
+    expect($this->cache->get('a', 'group'))->toBeFalse();
+});
+
+it('does not count a read of an invalid key as a miss', function (): void {
+    $this->cache->get('', 'group');
+
+    expect($this->cache->cache_misses)->toBe(0)
+        ->and($this->cache->cache_hits)->toBe(0);
+});
+
+it('counts every hit and every miss of a multiple read', function (): void {
+    $this->cache->set('a', 1, 'group');
+    $this->cache->set('b', 2, 'group');
+    $this->cache->get_multiple(['a', 'b', 'absent'], 'group');
+
+    expect($this->cache->cache_hits)->toBe(2)
+        ->and($this->cache->cache_misses)->toBe(1);
+});
+
+it('reads a single key and a text force flag in a multiple read without a warning', function (): void {
+    $this->cache->set('a', 1, 'group');
+
+    set_error_handler(static function (int $level, string $message): never {
+        throw new ErrorException($message, 0, $level);
+    });
+
+    try {
+        $single = $this->cache->get_multiple('a', 'group', '1');
+    } finally {
+        restore_error_handler();
+    }
+
+    expect($single)->toBe(['a' => 1]);
+});

@@ -9,6 +9,7 @@ use Pollora\ObjectCache\Domain\Prefetch\PrefetchPlan;
 use Pollora\ObjectCache\Infrastructure\Stores\InMemoryCacheStore;
 use Pollora\ObjectCache\Tests\Support\Caches;
 use Pollora\ObjectCache\Tests\Support\CountingStore;
+use Pollora\ObjectCache\Tests\Support\FlakyStore;
 use Pollora\ObjectCache\Tests\Support\FrozenClock;
 use Pollora\ObjectCache\Tests\Support\InMemoryHarness;
 use Pollora\ObjectCache\Tests\Support\RedisHarness;
@@ -313,4 +314,100 @@ it('leaves out a value holding an object whose class is not loaded yet', functio
 
     expect($afterPlain)->toBe(1)
         ->and($store->gets)->toBe(2);
+});
+
+it('does not fail when the profile cannot be written, and degrades', function (): void {
+    $store = new FlakyStore(new InMemoryCacheStore);
+    (Caches::make($store))->set('1', 'v', 'posts');
+
+    $request = Caches::make($store, prefetch: new PrefetchPlan('front:1:shop', 50, 3600));
+    $request->get('1', 'posts');
+    $store->failWrites = true;
+    $request->savePrefetch(true);
+
+    expect($request->isDegraded())->toBeTrue();
+});
+
+it('does not try to prefetch once a write has failed before the first read', function (): void {
+    $store = new FlakyStore(new InMemoryCacheStore);
+    $plan = new PrefetchPlan('front:1:shop', 50, 3600);
+    Caches::make($store)->set('1', 'v', 'posts');
+    $first = Caches::make($store, prefetch: $plan);
+    $first->get('1', 'posts');
+    $first->savePrefetch(true);
+
+    $store->failWrites = true;
+    $request = Caches::make($store, prefetch: $plan);
+    $store->getManys = 0;
+    $request->set('x', 'w', 'posts');
+    $found = $request->get('x', 'posts');
+    $request->get('1', 'posts');
+
+    expect($request->isDegraded())->toBeTrue()
+        ->and($found?->value)->toBe('w')
+        ->and($store->getManys)->toBe(0);
+});
+
+it('reads the first request without a profile, without a warning', function (): void {
+    $request = Caches::make(new InMemoryCacheStore, prefetch: new PrefetchPlan('front:1:shop', 50, 3600));
+
+    set_error_handler(static function (int $level, string $message): never {
+        throw new ErrorException($message, 0, $level);
+    });
+
+    try {
+        $value = $request->get('absent', 'posts');
+    } finally {
+        restore_error_handler();
+    }
+
+    expect($value)->toBeNull();
+});
+
+it('keeps a value the request wrote itself, whatever the profile loads', function (): void {
+    $store = new CountingStore(new InMemoryCacheStore);
+    prefetchSeed($store);
+
+    $second = prefetchRequest($store);
+    $second->set('1', 'mine', 'posts');
+    Caches::make($store)->set('1', 'theirs', 'posts');
+
+    expect($second->get('1', 'posts')->value)->toBe('mine');
+});
+
+it('keeps the loaded values for the whole request, not for a second', function (): void {
+    $clock = new FrozenClock;
+    $store = new CountingStore(new InMemoryCacheStore($clock));
+    prefetchSeed($store);
+
+    $second = Caches::make($store, runtime: new InMemoryCacheStore($clock), prefetch: new PrefetchPlan('front:1:shop', 50, 3600));
+    $second->get('1', 'posts');
+    $clock->advance(60);
+    $store->gets = 0;
+    $second->get('2', 'posts');
+
+    expect($store->gets)->toBe(0);
+});
+
+it('stores the profile under the site, not under a blog, in a network', function (): void {
+    $store = new CountingStore(new InMemoryCacheStore);
+    $writer = Caches::make($store, multisite: true);
+    $writer->set('1', 'v', 'posts');
+    $request = Caches::make($store, multisite: true, prefetch: new PrefetchPlan('front:1:shop', 50, 3600));
+    $request->get('1', 'posts');
+    $request->savePrefetch(true);
+
+    $key = (new KeyBuilder('site', true))->key(ObjectCache::PROFILE_GROUP, 'front:1:shop', true, 0);
+
+    expect($store->get($key))->not->toBeNull();
+});
+
+it('goes on after a key that is not a name, and still reads the others', function (): void {
+    $store = new CountingStore(new InMemoryCacheStore);
+    $cache = Caches::make($store);
+    $cache->set('a', 'v', 'posts');
+
+    $result = $cache->getMany([['not', 'a name'], 'a'], 'posts');
+
+    expect($result['a']?->value)->toBe('v');
 });

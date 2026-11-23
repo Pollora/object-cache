@@ -133,3 +133,97 @@ it('works under a Laravel repository', function (): void {
         ->and($cache->get('k'))->toBe('computed')
         ->and($cache->add('k', 'other', 60))->toBeFalse();
 });
+
+it('reads what another process wrote, not what this request cached', function (): void {
+    $persistent = new InMemoryCacheStore;
+    $store = new ObjectCacheStore(Caches::make($persistent), 'laravel');
+    $store->put('a', 'mine', 60);
+    $store->put('b', 'mine', 60);
+
+    $other = Caches::make($persistent);
+    $other->set('a', 'theirs', 'laravel');
+    $other->set('b', 'theirs', 'laravel');
+
+    expect($store->get('a'))->toBe('theirs')
+        ->and($store->many(['b']))->toBe(['b' => 'theirs']);
+});
+
+it('reads a missing key as null without a warning', function (): void {
+    $store = laravelStore();
+    $store->put('a', 1, 60);
+
+    set_error_handler(static function (int $level, string $message): never {
+        throw new ErrorException($message, 0, $level);
+    });
+
+    try {
+        $values = $store->many(['a', 'missing']);
+    } finally {
+        restore_error_handler();
+    }
+
+    expect($values)->toBe(['a' => 1, 'missing' => null]);
+});
+
+it('stores for one second, not for none', function (): void {
+    $store = laravelStore();
+
+    expect($store->put('k', 'v', 1))->toBeTrue()
+        ->and($store->get('k'))->toBe('v');
+});
+
+it('reports a failed write of several entries, and a successful one', function (): void {
+    $store = laravelStore();
+
+    expect($store->putMany(['a' => 1, 'b' => 2], 60))->toBeTrue()
+        ->and($store->putMany(['' => 1, 'c' => 2], 60))->toBeFalse()
+        ->and($store->get('c'))->toBe(2);
+});
+
+it('keeps a value forever, past any lifetime', function (): void {
+    $clock = new FrozenClock;
+    $store = new ObjectCacheStore(Caches::make(new InMemoryCacheStore($clock)), 'laravel');
+    $store->forever('k', 'v');
+    $clock->advance(100000);
+
+    expect($store->get('k'))->toBe('v');
+});
+
+it('gives a touched entry the lifetime asked for, counted from now', function (): void {
+    $clock = new FrozenClock;
+    $store = new ObjectCacheStore(Caches::make(new InMemoryCacheStore($clock)), 'laravel');
+    $store->forever('k', 'v');
+    $store->touch('k', 100);
+    $clock->advance(99);
+    $stillThere = $store->get('k');
+    $clock->advance(2);
+
+    expect($stillThere)->toBe('v')
+        ->and($store->get('k'))->toBeNull();
+});
+
+it('lets a touch with no lifetime keep the entry', function (): void {
+    $clock = new FrozenClock;
+    $store = new ObjectCacheStore(Caches::make(new InMemoryCacheStore($clock)), 'laravel');
+    $store->put('k', 'v', 10);
+    $store->touch('k', -5);
+    $clock->advance(1000);
+
+    expect($store->get('k'))->toBe('v');
+});
+
+it('does not touch an entry another process deleted', function (): void {
+    $persistent = new InMemoryCacheStore;
+    $store = new ObjectCacheStore(Caches::make($persistent), 'laravel');
+    $store->put('k', 'v', 60);
+    Caches::make($persistent)->delete('k', 'laravel');
+
+    expect($store->touch('k', 60))->toBeFalse();
+});
+
+it('adds for one second, not for none', function (): void {
+    $store = laravelStore();
+
+    expect($store->add('k', 'v', 1))->toBeTrue()
+        ->and($store->get('k'))->toBe('v');
+});

@@ -481,7 +481,7 @@ final class ObjectCache
         }
 
         try {
-            $this->persistent->set($this->profileKey(), ['e' => $merged], $this->ttl->normalize($this->prefetch->ttl));
+            $this->persistent->set($this->profileKey($this->prefetch), ['e' => $merged], $this->ttl->normalize($this->prefetch->ttl));
         } catch (StoreUnavailableException $storeUnavailableException) {
             $this->failure = $storeUnavailableException;
         }
@@ -509,7 +509,7 @@ final class ObjectCache
         }
 
         try {
-            $profile = $this->persistent->get($this->profileKey());
+            $profile = $this->persistent->get($this->profileKey($this->prefetch));
             $this->storedProfile = PrefetchProfile::parse($profile?->value);
             $pending = [];
 
@@ -551,9 +551,9 @@ final class ObjectCache
         return $group !== self::PROFILE_GROUP && ! $this->groups->isNonPersistent($group) && ! $this->groups->isNonPrefetchable($group);
     }
 
-    private function profileKey(): string
+    private function profileKey(PrefetchPlan $plan): string
     {
-        return $this->keys->key(self::PROFILE_GROUP, $this->prefetch->signature ?? '', true, 0);
+        return $this->keys->key(self::PROFILE_GROUP, $plan->signature, true, $this->blogId);
     }
 
     /**

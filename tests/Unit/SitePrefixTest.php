@@ -48,3 +48,15 @@ it('derives another prefix for another site, database or table prefix', function
 it('derives a prefix when the database is not configured', function (): void {
     expect(SitePrefix::resolve(new Repository([])))->toMatch('/^pollora-[0-9a-f]{12}$/');
 });
+
+it('ignores a salt made of blanks', function (): void {
+    expect(SitePrefix::resolve(prefixConfig(), "  \t"))->toStartWith('pollora-');
+});
+
+it('derives the prefix from the first twelve characters of a hash of the three values', function (): void {
+    expect(SitePrefix::resolve(prefixConfig()))->toBe('pollora-'.substr(sha1('https://example.test|wp|wp_'), 0, 12))
+        ->and(SitePrefix::resolve(new Repository([])))->toBe('pollora-'.substr(sha1('||'), 0, 12))
+        ->and(SitePrefix::resolve(new Repository(['app' => ['url' => 'https://a.test']])))->toBe('pollora-'.substr(sha1('https://a.test||'), 0, 12))
+        ->and(SitePrefix::resolve(new Repository(['database' => ['default' => 'x', 'connections' => ['x' => ['database' => 'd']]]])))->toBe('pollora-'.substr(sha1('|d|'), 0, 12))
+        ->and(SitePrefix::resolve(new Repository(['database' => ['default' => 'x', 'connections' => ['x' => ['prefix' => 'p_']]]])))->toBe('pollora-'.substr(sha1('||p_'), 0, 12));
+});
