@@ -293,3 +293,24 @@ it('keeps at most the profile limit of keys', function (StoreHarness $harness): 
 
     expect($store->gets)->toBe(2);
 })->with('prefetch harnesses');
+
+it('leaves out a value holding an object whose class is not loaded yet', function (): void {
+    $store = new CountingStore(new InMemoryCacheStore);
+    $writer = Caches::make($store);
+    $writer->set('term', unserialize('O:20:"Not_Loaded_Anywhere_":1:{s:1:"a";i:1;}'), 'terms');
+    $writer->set('plain', ['ok' => true], 'terms');
+
+    $first = prefetchRequest($store);
+    $first->get('term', 'terms');
+    $first->get('plain', 'terms');
+    $first->savePrefetch(true);
+
+    $second = prefetchRequest($store);
+    $store->gets = 0;
+    $second->get('plain', 'terms');
+    $afterPlain = $store->gets;
+    $second->get('term', 'terms');
+
+    expect($afterPlain)->toBe(1)
+        ->and($store->gets)->toBe(2);
+});

@@ -10,6 +10,7 @@ use Pollora\ObjectCache\Domain\Exceptions\StoreUnavailableException;
 use Pollora\ObjectCache\Domain\GroupRegistry;
 use Pollora\ObjectCache\Domain\KeyBuilder;
 use Pollora\ObjectCache\Domain\Prefetch\AccessLog;
+use Pollora\ObjectCache\Domain\Prefetch\IncompleteObjects;
 use Pollora\ObjectCache\Domain\Prefetch\PrefetchPlan;
 use Pollora\ObjectCache\Domain\Prefetch\PrefetchProfile;
 use Pollora\ObjectCache\Domain\TtlPolicy;
@@ -489,7 +490,8 @@ final class ObjectCache
     /**
      * On the first read, load every key the profile names with one call to the persistent store.
      *
-     * The values go to the request cache, where a key this request already wrote is left alone.
+     * The values go to the request cache, where a key this request already wrote is left alone,
+     * and a value holding an object whose class is not loaded yet is left out (see `IncompleteObjects`).
      * Done lazily, not when the cache is built: WordPress registers its non-persistent groups
      * after that, and the registry must be complete to know what may be loaded.
      */
@@ -522,7 +524,7 @@ final class ObjectCache
             }
 
             foreach ($this->persistent->getMany($pending) as $storageKey => $value) {
-                if (! $this->runtime->get($storageKey) instanceof CacheValue) {
+                if (! $this->runtime->get($storageKey) instanceof CacheValue && ! IncompleteObjects::in($value->value)) {
                     $this->runtime->set($storageKey, $value->value, 0);
                 }
             }
