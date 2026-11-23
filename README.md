@@ -82,9 +82,10 @@ A WordPress page reads a hundred keys or more, one call to Redis each. With the 
 - **The profile** is written when a request read keys it did not know, up to `max_keys`, and expires after `ttl` seconds without a rewrite. It lives under the site prefix, so `flush` removes it too. A page that brings few new keys does not rewrite a full profile.
 - **What is never loaded early**: non-persistent groups, `prefetch.exclude_groups`, and what a request wrote before its first read. A key changed or deleted since the profile was written is read from Redis as of the request, so the prefetch cannot serve an older value than a normal read would.
 - **Groups where a value read a moment too soon would be wrong** (sessions, logins) belong in `prefetch.exclude_groups`. Another package adds its own from a service provider's `register()`: `config()->push('pollora.object-cache.prefetch.exclude_groups', 'session_*')`.
+- **A value that holds an object whose class is not loaded yet** (the first read of a request comes before WordPress has loaded all its classes) is left out of the prefetch, and read normally when it is asked for.
 - If Redis stops answering while the profile is loaded, the request degrades as for any read.
 
-It is off by default: turn it on, measure the number of Redis commands per page (`redis-cli INFO commandstats`), and keep it if it falls.
+It is off by default: turn it on, measure the number of Redis commands per page (`redis-cli INFO commandstats`), and keep it if it falls. On a development site (WordPress 7, WooCommerce, a Blade theme), once the profiles were written, the commands per request went from about 230 to 100-130 on the home page, from 203 to 126 on the shop page, and from 168 to 52 on a product page. A WooCommerce cart (add twice, read again, a second visitor) and a checkout through the Store API gave the same results with the prefetch on as without it.
 
 ## The Laravel cache driver
 
