@@ -76,3 +76,15 @@ it('ignores a URL it cannot parse, and a database that is not a number', functio
 it('builds the connector', function (): void {
     expect(ConnectorFactory::make(connectionConfig()))->toBeInstanceOf(PhpRedisConnector::class);
 });
+
+it('ignores a URL it cannot read, and keeps the other parameters', function (): void {
+    $parameters = ConnectorFactory::parameters(connectionConfig(['default' => ['url' => 'http:///', 'host' => 'a.test']]));
+
+    expect($parameters['host'])->toBe('a.test');
+});
+
+it('reads the database of a URL as a number', function (): void {
+    $parameters = ConnectorFactory::parameters(connectionConfig(['default' => ['url' => 'redis://r.test/4']]));
+
+    expect($parameters['database'])->toBe(4);
+});

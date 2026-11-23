@@ -79,14 +79,29 @@ final readonly class PhpRedisConnector implements RedisConnector
      */
     private function authenticate(Redis $redis): void
     {
-        $password = $this->config['password'] ?? null;
+        $credentials = self::credentials($this->config);
+
+        if ($credentials !== null) {
+            $redis->auth($credentials);
+        }
+    }
+
+    /**
+     * What to give `AUTH`: the password alone, `[user, password]` for an ACL user, or null without a password.
+     *
+     * @param  array<string, mixed>  $config
+     * @return string|array{0: string, 1: string}|null
+     */
+    public static function credentials(array $config): string|array|null
+    {
+        $password = $config['password'] ?? null;
 
         if ($password === null || $password === '') {
-            return;
+            return null;
         }
 
-        $username = $this->config['username'] ?? null;
+        $username = $config['username'] ?? null;
 
-        $redis->auth($username === null || $username === '' ? $password : [$username, $password]);
+        return $username === null || $username === '' ? (string) $password : [(string) $username, (string) $password];
     }
 }

@@ -120,3 +120,28 @@ it('raises no warning on a payload it cannot read', function (string $stored): v
 
     expect($warnings)->toBe([]);
 })->with(['cut short' => ['x:p:a:2:{s:1:"a";'], 'not serialized' => ['x:p:nonsense'], 'bad float' => ['d:abc']]);
+
+it('swallows the warning of a corrupt value, and gives the error handler back', function (): void {
+    $seen = [];
+    $previous = set_error_handler(static function (int $level, string $message) use (&$seen): bool {
+        $seen[] = $message;
+
+        return true;
+    });
+
+    $display = ini_set('display_errors', '1');
+    ob_start();
+
+    try {
+        $value = (new ValueCodec)->decode('x:p:a:1:{broken');
+        trigger_error('after', E_USER_WARNING);
+    } finally {
+        $output = ob_get_clean();
+        ini_set('display_errors', (string) $display);
+        restore_error_handler();
+    }
+
+    expect($value)->toBeNull()
+        ->and($output)->toBe('')
+        ->and($seen)->toBe(['after']);
+});

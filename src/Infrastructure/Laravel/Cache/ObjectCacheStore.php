@@ -48,7 +48,7 @@ final readonly class ObjectCacheStore implements Store
         $values = [];
 
         foreach ($this->cache->getMany($keys, $this->group, true) as $key => $value) {
-            $values[(string) $key] = $value?->value;
+            $values[$key] = $value?->value;
         }
 
         return $values;
@@ -100,7 +100,7 @@ final readonly class ObjectCacheStore implements Store
         $stored = true;
 
         foreach ($values as $key => $value) {
-            $stored = $this->put((string) $key, $value, $seconds) && $stored;
+            $stored = $this->put($key, $value, $seconds) && $stored;
         }
 
         return $stored;

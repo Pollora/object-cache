@@ -54,36 +54,22 @@ final class PrefetchProfile
      */
     public static function merge(array $stored, array $seen, int $limit): ?array
     {
-        $known = [];
-
-        foreach ($stored as [$group, $key, $blogId]) {
-            $known[self::id($group, $key, $blogId)] = true;
-        }
-
-        $new = 0;
-        $seenIds = [];
-
-        foreach ($seen as [$group, $key, $blogId]) {
-            $id = self::id($group, $key, $blogId);
-            $seenIds[$id] = true;
-
-            if (! isset($known[$id])) {
-                $new++;
-            }
-        }
+        $known = array_flip(array_map(static fn (array $entry): string => self::id($entry[0], $entry[1], $entry[2]), $stored));
+        $seenIds = array_flip(array_map(static fn (array $entry): string => self::id($entry[0], $entry[1], $entry[2]), $seen));
+        $new = count(array_diff_key($seenIds, $known));
 
         if ($new === 0) {
             return null;
         }
 
-        if (count($stored) >= $limit && $new < max(1, intdiv($limit, 5))) {
+        if (count($stored) >= $limit && $new < intdiv($limit, 5)) {
             return null;
         }
 
         $merged = $seen;
 
         foreach ($stored as $entry) {
-            if (! isset($seenIds[self::id($entry[0], $entry[1], $entry[2])])) {
+            if (! array_key_exists(self::id($entry[0], $entry[1], $entry[2]), $seenIds)) {
                 $merged[] = $entry;
             }
         }

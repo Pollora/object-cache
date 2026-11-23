@@ -53,3 +53,33 @@ it('writes none when the prefetch is off, the request has no kind, or the profil
 it('uses a default limit and lifetime when the configuration names none', function (): void {
     expect(profileWritten(factoryConfig(['enabled' => true]), 'front:1:shop'))->toBeTrue();
 });
+
+it('reads the limit and the lifetime as numbers when the configuration holds them as text', function (): void {
+    expect(profileWritten(factoryConfig(['enabled' => true, 'max_keys' => '10', 'ttl' => '60']), 'front:1:shop'))->toBeTrue();
+});
+
+it('keeps a profile of one key when that is the limit', function (): void {
+    expect(profileWritten(factoryConfig(['enabled' => true, 'max_keys' => 1]), 'front:1:shop'))->toBeTrue();
+});
+
+it('records at most 300 keys by default, and keeps the profile for a week', function (): void {
+    $store = (new RedisHarness)->store();
+    $writer = ObjectCacheFactory::make(factoryConfig(['enabled' => false]));
+
+    for ($i = 1; $i <= 301; $i++) {
+        $writer->set((string) $i, 'v', 'posts');
+    }
+
+    $cache = ObjectCacheFactory::make(factoryConfig(['enabled' => true]), requestKind: 'front:1:shop');
+
+    for ($i = 1; $i <= 301; $i++) {
+        $cache->get((string) $i, 'posts');
+    }
+
+    $cache->savePrefetch(true);
+
+    $key = (new KeyBuilder('factory-test'))->key('object-cache-prefetch', 'front:1:shop', true, 0);
+
+    expect($store->get($key)?->value['e'])->toHaveCount(300)
+        ->and(RedisHarness::connector()->connect()->ttl($key))->toBe(604800);
+});

@@ -53,10 +53,12 @@ final class DropIn
 
     /**
      * Save what the request read for the prefetch, then write the failure of Redis, if there was one, to the PHP error log.
+     *
+     * @param  int|false|null  $status  The HTTP status of the response; read from PHP when null.
      */
-    public static function report(WordPressObjectCache $cache): void
+    public static function report(WordPressObjectCache $cache, int|false|null $status = null): void
     {
-        $cache->engine()->savePrefetch(http_response_code() === 200);
+        $cache->engine()->savePrefetch(($status ?? http_response_code()) === 200);
 
         $failure = $cache->engine()->failure();
 

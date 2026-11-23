@@ -99,3 +99,12 @@ it('reports an address that refuses the connection', function (): void {
 
     expect(fn () => $connector->connect())->toThrow(StoreUnavailableException::class);
 });
+
+it('gives AUTH the password alone, or the user and the password of an ACL user, or nothing', function (): void {
+    expect(PhpRedisConnector::credentials(['password' => 'secret']))->toBe('secret')
+        ->and(PhpRedisConnector::credentials(['password' => 'secret', 'username' => '']))->toBe('secret')
+        ->and(PhpRedisConnector::credentials(['password' => 'secret', 'username' => 'cache']))->toBe(['cache', 'secret'])
+        ->and(PhpRedisConnector::credentials(['password' => '', 'username' => 'cache']))->toBeNull()
+        ->and(PhpRedisConnector::credentials(['username' => 'cache']))->toBeNull()
+        ->and(PhpRedisConnector::credentials([]))->toBeNull();
+});

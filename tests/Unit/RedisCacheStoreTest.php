@@ -104,3 +104,17 @@ it('stores a lone float and the result of float arithmetic as text it can read b
 
     expect($this->raw->get('k'))->toBe('d:2.5');
 });
+
+it('answers false for a key that is absent, without a warning', function (): void {
+    set_error_handler(static function (int $level, string $message): never {
+        throw new ErrorException($message, 0, $level);
+    });
+
+    try {
+        $result = $this->store->adjust('absent', 1);
+    } finally {
+        restore_error_handler();
+    }
+
+    expect($result)->toBeFalse();
+});
