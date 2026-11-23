@@ -338,9 +338,9 @@ it('does not try to prefetch once a write has failed before the first read', fun
 
     $store->failWrites = true;
     $request = Caches::make($store, prefetch: $plan);
+    $store->getManys = 0;
     $request->set('x', 'w', 'posts');
     $found = $request->get('x', 'posts');
-    $store->getManys = 0;
     $request->get('1', 'posts');
 
     expect($request->isDegraded())->toBeTrue()

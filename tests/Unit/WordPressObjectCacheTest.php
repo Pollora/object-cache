@@ -274,3 +274,45 @@ it('says which features of the object cache API it has', function (): void {
         ->and($this->cache->supports('add_multiple'))->toBeTrue()
         ->and($this->cache->supports('something_else'))->toBeFalse();
 });
+
+it('adds nothing while WordPress suspends additions', function (): void {
+    Functions\when('wp_suspend_cache_addition')->justReturn(true);
+
+    expect($this->cache->add('a', 1, 'group'))->toBeFalse();
+
+    Functions\when('wp_suspend_cache_addition')->justReturn(false);
+
+    expect($this->cache->get('a', 'group'))->toBeFalse();
+});
+
+it('does not count a read of an invalid key as a miss', function (): void {
+    $this->cache->get('', 'group');
+
+    expect($this->cache->cache_misses)->toBe(0)
+        ->and($this->cache->cache_hits)->toBe(0);
+});
+
+it('counts every hit and every miss of a multiple read', function (): void {
+    $this->cache->set('a', 1, 'group');
+    $this->cache->set('b', 2, 'group');
+    $this->cache->get_multiple(['a', 'b', 'absent'], 'group');
+
+    expect($this->cache->cache_hits)->toBe(2)
+        ->and($this->cache->cache_misses)->toBe(1);
+});
+
+it('reads a single key and a text force flag in a multiple read without a warning', function (): void {
+    $this->cache->set('a', 1, 'group');
+
+    set_error_handler(static function (int $level, string $message): never {
+        throw new ErrorException($message, 0, $level);
+    });
+
+    try {
+        $single = $this->cache->get_multiple('a', 'group', '1');
+    } finally {
+        restore_error_handler();
+    }
+
+    expect($single)->toBe(['a' => 1]);
+});

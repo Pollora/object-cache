@@ -220,3 +220,10 @@ it('does not touch an entry another process deleted', function (): void {
 
     expect($store->touch('k', 60))->toBeFalse();
 });
+
+it('adds for one second, not for none', function (): void {
+    $store = laravelStore();
+
+    expect($store->add('k', 'v', 1))->toBeTrue()
+        ->and($store->get('k'))->toBe('v');
+});
