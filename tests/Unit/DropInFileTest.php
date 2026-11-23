@@ -25,7 +25,7 @@ function runDropIn(string $mode, bool $withExtensions): array
 }
 
 it('defines no wp_cache function without phpredis, so WordPress keeps its own cache', function (): void {
-    $result = runDropIn('use', withExtensions: false);
+    $result = runDropIn('bare', withExtensions: false);
 
     expect($result)->toBe(['init' => false]);
 });

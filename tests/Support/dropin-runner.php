@@ -10,12 +10,27 @@ use Pollora\ObjectCache\Tests\Support\Caches;
  * Loads the drop-in in a PHP process of its own, the way WordPress does, and
  * prints what it found as JSON. Run with `php -n` for a PHP without extensions.
  *
- * usage: php dropin-runner.php <project root> <drop-in file> [use]
+ * usage: php dropin-runner.php <project root> <drop-in file> [load|use|bare]
  */
 
 [, $root, $dropIn, $mode] = $argv + [null, null, null, 'load'];
 
-require $root.'/vendor/autoload.php';
+if ($mode === 'bare') {
+    // A PHP without extensions cannot always load the vendor autoloader (its helper files may need mbstring); the drop-in only needs the package's own classes.
+    spl_autoload_register(static function (string $class) use ($root): void {
+        $prefix = 'Pollora\\ObjectCache\\';
+
+        if (str_starts_with($class, $prefix)) {
+            $file = $root.'/src/'.str_replace('\\', '/', substr($class, strlen($prefix))).'.php';
+
+            if (is_file($file)) {
+                require $file;
+            }
+        }
+    });
+} else {
+    require $root.'/vendor/autoload.php';
+}
 
 if ($mode === 'use') {
     $container = new Container;
