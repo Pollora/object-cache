@@ -2,7 +2,7 @@
 
 A persistent object cache for WordPress, built for [Pollora](https://pollora.dev), the Laravel framework for WordPress. It keeps what WordPress caches (options, posts, terms, queries) in Redis between requests, instead of rebuilding it from the database on every page.
 
-> **Status: pre-release.** The engine, the Redis store, the `object-cache.php` drop-in and the Artisan commands are in. Installing the package changes nothing until you run `php artisan pollora:object-cache:enable`. Not tested on a real project yet: do not depend on its API before `0.1.0`.
+> **Status: first release (`0.1`).** The engine, the Redis store, the `object-cache.php` drop-in, the Artisan commands and the Laravel cache driver are in, and the test suite runs against a real Redis in CI. Installing the package changes nothing until you run `php artisan pollora:object-cache:enable`. It has not run in production yet, and the API may change before `1.0`: pin the version.
 
 ## What it is
 
@@ -91,7 +91,7 @@ Declare a store with the `wordpress` driver in `config/cache.php`:
 
 ## Installation
 
-Not yet useful on its own, but safe to require:
+Installing it changes nothing until the drop-in is enabled:
 
 ```bash
 composer require pollora/object-cache
