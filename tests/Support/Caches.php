@@ -8,6 +8,7 @@ use Pollora\ObjectCache\Application\ObjectCache;
 use Pollora\ObjectCache\Domain\Contracts\CacheStore;
 use Pollora\ObjectCache\Domain\GroupRegistry;
 use Pollora\ObjectCache\Domain\KeyBuilder;
+use Pollora\ObjectCache\Domain\Prefetch\PrefetchPlan;
 use Pollora\ObjectCache\Domain\TtlPolicy;
 use Pollora\ObjectCache\Infrastructure\Stores\InMemoryCacheStore;
 
@@ -23,6 +24,7 @@ final class Caches
         ?InMemoryCacheStore $runtime = null,
         ?GroupRegistry $groups = null,
         ?TtlPolicy $ttl = null,
+        ?PrefetchPlan $prefetch = null,
     ): ObjectCache {
         return new ObjectCache(
             $persistent,
@@ -30,6 +32,8 @@ final class Caches
             new KeyBuilder('site', $multisite),
             $groups ?? new GroupRegistry,
             $ttl ?? new TtlPolicy,
+            1,
+            $prefetch,
         );
     }
 }

@@ -20,6 +20,9 @@ final class GroupRegistry
     /** @var array<string, true> */
     private array $nonPersistent = [];
 
+    /** @var array<string, true> */
+    private array $nonPrefetchable = [];
+
     /**
      * Mark groups as shared by every site of a network.
      *
@@ -45,6 +48,19 @@ final class GroupRegistry
     }
 
     /**
+     * Mark groups the prefetch must never record nor load, because a value read a moment
+     * too early would be wrong (sessions, logins).
+     *
+     * @param  string|list<string>  $groups
+     */
+    public function addNonPrefetchable(string|array $groups): void
+    {
+        foreach ((array) $groups as $group) {
+            $this->nonPrefetchable[$group] = true;
+        }
+    }
+
+    /**
      * Whether the group is shared by every site of a network.
      */
     public function isGlobal(string $group): bool
@@ -58,6 +74,14 @@ final class GroupRegistry
     public function isNonPersistent(string $group): bool
     {
         return self::matches($this->nonPersistent, $group);
+    }
+
+    /**
+     * Whether the prefetch leaves the group alone.
+     */
+    public function isNonPrefetchable(string $group): bool
+    {
+        return self::matches($this->nonPrefetchable, $group);
     }
 
     /**

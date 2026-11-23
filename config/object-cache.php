@@ -58,6 +58,22 @@ return [
         'flush_with_cache_clear' => (bool) env('OBJECT_CACHE_FLUSH_WITH_CACHE_CLEAR', true),
     ],
 
+    /*
+     * Prefetch: pages of one kind (the first segment of the path, signed in or not)
+     * remember the keys they read, and the next one loads them with a single call to
+     * Redis instead of one per key. Off by default. Only pages of the front, fetched
+     * with GET or HEAD, take part; a page that is not answered with a 200 writes nothing.
+     */
+    'prefetch' => [
+        'enabled' => (bool) env('OBJECT_CACHE_PREFETCH', false),
+        // The most keys a profile holds, and the most one page records.
+        'max_keys' => (int) env('OBJECT_CACHE_PREFETCH_MAX_KEYS', 300),
+        // Seconds a profile lives without being rewritten.
+        'ttl' => (int) env('OBJECT_CACHE_PREFETCH_TTL', 604800),
+        // Groups never loaded early, because a value read a moment too soon would be wrong. A name may end with `*`.
+        'exclude_groups' => ['userlogins'],
+    ],
+
     // Groups shared by every site of a network, and groups kept out of Redis. A name may end with `*`.
     'global_groups' => [],
     'non_persistent_groups' => [],

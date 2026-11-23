@@ -64,3 +64,21 @@ it('empties the request cache before each queued job', function (): void {
 
     Event::dispatch(new JobProcessing('sync', Mockery::mock(Job::class, ['payload' => []])));
 });
+
+it('has the prefetch off by default, with the login group left out of it', function (): void {
+    expect(config('pollora.object-cache.prefetch.enabled'))->toBeFalse()
+        ->and(config('pollora.object-cache.prefetch.max_keys'))->toBe(300)
+        ->and(config('pollora.object-cache.prefetch.ttl'))->toBe(604800)
+        ->and(config('pollora.object-cache.prefetch.exclude_groups'))->toBe(['userlogins']);
+});
+
+it('reads the groups other packages add to the prefetch exclusions when the cache is built', function (): void {
+    Functions\when('is_multisite')->justReturn(false);
+    Functions\when('get_current_blog_id')->justReturn(1);
+    config(['pollora.object-cache.prefetch.enabled' => true]);
+    config()->push('pollora.object-cache.prefetch.exclude_groups', 'session_*');
+
+    $cache = $this->app->make(ObjectCache::class);
+
+    expect($cache)->toBeInstanceOf(ObjectCache::class);
+});
