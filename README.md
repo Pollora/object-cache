@@ -1,4 +1,15 @@
-# Pollora Object Cache
+<p align="center">
+  <a href="https://pollora.dev">
+    <img src="https://raw.githubusercontent.com/Pollora/.github/main/brand/banners/object-cache.png" width="100%" alt="Pollora Object Cache: a persistent Redis object cache for WordPress">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://packagist.org/packages/pollora/object-cache"><img src="https://img.shields.io/packagist/v/pollora/object-cache" alt="Latest version"></a>
+  <a href="https://packagist.org/packages/pollora/object-cache"><img src="https://img.shields.io/packagist/dt/pollora/object-cache" alt="Total downloads"></a>
+  <a href="https://github.com/Pollora/object-cache/actions/workflows/harness.yml"><img src="https://github.com/Pollora/object-cache/actions/workflows/harness.yml/badge.svg" alt="Harness"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Pollora/object-cache" alt="License"></a>
+</p>
 
 A persistent object cache for WordPress, built for [Pollora](https://pollora.dev), the Laravel framework for WordPress. It keeps what WordPress caches (options, posts, terms, queries) in Redis between requests, instead of rebuilding it from the database on every page.
 
@@ -108,6 +119,14 @@ composer qa     # every gate of the Pollora harness
 
 The Redis tests need a Redis they may empty: they use database 15 (`OBJECT_CACHE_TEST_REDIS_DB`) of `REDIS_HOST`:`REDIS_PORT` (127.0.0.1:6379), refuse database 0, and are skipped when there is no Redis, except in CI, where they fail instead.
 
+## Documentation
+
+The package in a Pollora project: [Object Cache](https://pollora.dev/advanced/object-cache/).
+
+## Contributing
+
+Contributions are welcome: see the [contributing guide](https://github.com/Pollora/.github/blob/main/CONTRIBUTING.md). Report security issues privately, as described in the [security policy](https://github.com/Pollora/.github/blob/main/SECURITY.md).
+
 ## License
 
-MIT, see [LICENSE](LICENSE).
+Pollora Object Cache is open-source software licensed under the [MIT license](LICENSE). © [RuBee group](https://rubee.group)
