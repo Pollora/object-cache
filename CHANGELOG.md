@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-23
+
 ### Added
 
 - `ObjectCache`: the operations of `WP_Object_Cache` (`add`, `get`, `set`, `replace`, `delete`, `incr`, `decr`, their multiple forms, `flush`, `flush_group`, `flush_runtime`, global and non-persistent groups, multisite) over a persistent store and a request cache; a failing persistent store degrades to the request cache instead of throwing
