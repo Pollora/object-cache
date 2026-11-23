@@ -87,7 +87,6 @@ Declare a store with the `wordpress` driver in `config/cache.php`:
 
 ## Planned
 
-- `0.1.0`: a `pollora:doctor` check in the framework.
 - `0.2.0`: prefetching by group, `alloptions` split into a hash, asynchronous flush, read replicas.
 
 ## Installation
