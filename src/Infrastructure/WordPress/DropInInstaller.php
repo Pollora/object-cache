@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Pollora\ObjectCache\Infrastructure\WordPress;
 
+use Pollora\ObjectCache\Infrastructure\Exceptions\DropInFileException;
 use Pollora\ObjectCache\Infrastructure\Exceptions\ForeignDropInException;
-use RuntimeException;
 
 /**
  * Puts the package's `object-cache.php` in WordPress's content directory, and
@@ -60,7 +60,7 @@ final readonly class DropInInstaller
      * @return DropInStatus What stood at the target before the call.
      *
      * @throws ForeignDropInException When another object cache is installed and `$force` is false.
-     * @throws RuntimeException When the file cannot be written.
+     * @throws DropInFileException When the file cannot be written.
      */
     public function install(bool $force = false): DropInStatus
     {
@@ -71,7 +71,7 @@ final readonly class DropInInstaller
         }
 
         if ($before !== DropInStatus::Current && ! $this->copyDropIn()) {
-            throw new RuntimeException(sprintf('Cannot write %s.', $this->target));
+            throw DropInFileException::cannotWrite($this->target);
         }
 
         return $before;
@@ -83,7 +83,7 @@ final readonly class DropInInstaller
      * @return DropInStatus What stood at the target before the call.
      *
      * @throws ForeignDropInException When the file is another object cache's.
-     * @throws RuntimeException When the file cannot be removed.
+     * @throws DropInFileException When the file cannot be removed.
      */
     public function uninstall(): DropInStatus
     {
@@ -94,7 +94,7 @@ final readonly class DropInInstaller
         }
 
         if ($before !== DropInStatus::Missing && ! $this->removeDropIn()) {
-            throw new RuntimeException(sprintf('Cannot remove %s.', $this->target));
+            throw DropInFileException::cannotRemove($this->target);
         }
 
         return $before;

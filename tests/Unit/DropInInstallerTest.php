@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Pollora\ObjectCache\Infrastructure\Exceptions\DropInFileException;
 use Pollora\ObjectCache\Infrastructure\Exceptions\ForeignDropInException;
 use Pollora\ObjectCache\Infrastructure\WordPress\DropInInstaller;
 use Pollora\ObjectCache\Infrastructure\WordPress\DropInStatus;
@@ -76,7 +77,7 @@ it('refuses to replace another object cache, unless forced', function (): void {
 it('fails clearly when it cannot write', function (): void {
     $installer = new DropInInstaller($this->source, $this->dir.'/missing/object-cache.php');
 
-    expect(fn () => $installer->install())->toThrow(RuntimeException::class, 'Cannot write');
+    expect(fn () => $installer->install())->toThrow(DropInFileException::class, 'Cannot write');
 });
 
 it('removes its own drop-in, and says what it removed', function (): void {
@@ -118,7 +119,7 @@ it('fails clearly when it cannot remove', function (): void {
             $this->markTestSkipped('Permissions are not enforced here (running as root).');
         }
 
-        expect(fn () => $installer->uninstall())->toThrow(RuntimeException::class, 'Cannot remove');
+        expect(fn () => $installer->uninstall())->toThrow(DropInFileException::class, 'Cannot remove');
     } finally {
         chmod($dir, 0755);
         unlink($target);

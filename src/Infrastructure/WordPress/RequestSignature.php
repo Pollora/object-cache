@@ -49,7 +49,7 @@ final class RequestSignature
         }
 
         $segment = trim(explode('/', ltrim($path, '/'))[0]);
-        $segment = $segment === '' ? '_home' : (preg_match('/^[a-z0-9_-]{1,40}$/i', $segment) === 1 ? strtolower($segment) : '_other');
+        $segment = $segment === '' ? '_home' : (preg_match('/^[a-z0-9_-]{1,40}\z/i', $segment) === 1 ? strtolower($segment) : '_other');
 
         return 'front:'.$blogId.':'.$segment.(self::signedIn($cookies) ? ':member' : '');
     }

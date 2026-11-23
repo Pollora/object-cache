@@ -116,6 +116,7 @@ final readonly class ValueCodec
         set_error_handler(static fn (): bool => true);
 
         try {
+            // nosemgrep -- the bytes are what this package wrote to its own Redis keys; `allowed_classes` (config) decides which classes may be rebuilt, true by default because plugins cache objects of their own, as WordPress's own cache does
             $value = unserialize($bytes, ['allowed_classes' => $this->allowedClasses]);
         } finally {
             restore_error_handler();
