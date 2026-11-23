@@ -18,7 +18,7 @@
         "laravel/pint": "^1.22.1",
         "pestphp/pest": "^3.8.2",
         "phpstan/phpstan": "^2.1.16",
-        "pollora/harness": "^0.1.32"
+        "pollora/harness": "^0.1.34"
     },
     "suggest": {
         "ext-redis": "Required to reach Redis with phpredis; without it the object cache falls back to WordPress's in-memory cache.",

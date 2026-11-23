@@ -7,6 +7,7 @@ use Pollora\ObjectCache\Domain\TtlPolicy;
 use Pollora\ObjectCache\Infrastructure\Stores\InMemoryCacheStore;
 use Pollora\ObjectCache\Tests\Support\Caches;
 use Pollora\ObjectCache\Tests\Support\InMemoryHarness;
+use Pollora\ObjectCache\Tests\Support\RedisHarness;
 use Pollora\ObjectCache\Tests\Support\StoreHarness;
 
 /*
@@ -15,6 +16,7 @@ use Pollora\ObjectCache\Tests\Support\StoreHarness;
  */
 dataset('persistent harnesses', [
     'in-memory' => fn () => new InMemoryHarness,
+    'redis' => fn () => new RedisHarness,
 ]);
 
 it('returns what it was given, and tells a stored false from a miss', function (StoreHarness $harness): void {

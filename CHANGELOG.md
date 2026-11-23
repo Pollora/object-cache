@@ -13,3 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `CacheStore` contract, with `add`, `replace` and `adjust` as primitives of the store, and an in-memory store
 - Cache groups with `*` wildcards, a site prefix that scopes every key and every flush, and a time-to-live policy
 - A contract test suite that every store runs, and a conformance suite for the object cache
+- `RedisCacheStore`, the persistent store on Redis (phpredis): `add` and `replace` as `SET NX` and `SET XX`, `incr`/`decr` as one Lua script (exact integers, floor at 0, time to live kept, overflow to float), a flush by `SCAN` and `UNLINK` on the site's prefix only
+- `ValueCodec`, the value format: an integer as plain decimal text, a tag for other scalars, PHP or igbinary serialization for arrays and objects (tagged, so a change of serializer reads old values), an unreadable value is a miss
+- `PhpRedisConnector`, a private phpredis client (no serializer, compression or prefix), lazy, with one-second connect and read timeouts by default
+- The contract suite also runs on a real Redis, with the PHP and igbinary serializers, and covers integer limits, numeric strings and floats
