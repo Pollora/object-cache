@@ -121,3 +121,22 @@ it('does not touch the store for a non-persistent group', function (): void {
     expect($store->calls)->toBe(0)
         ->and($cache->isDegraded())->toBeFalse();
 });
+
+it('tries the store again once the request cache is flushed', function (): void {
+    $store = new UnavailableStore;
+    $cache = Caches::make($store);
+
+    $cache->get('k');
+
+    expect($cache->isDegraded())->toBeTrue();
+
+    $cache->flushRuntime();
+
+    expect($cache->isDegraded())->toBeFalse()
+        ->and($cache->failure())->toBeNull();
+
+    $cache->get('k');
+
+    expect($store->calls)->toBe(2)
+        ->and($cache->isDegraded())->toBeTrue();
+});

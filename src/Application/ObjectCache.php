@@ -373,10 +373,14 @@ final class ObjectCache
 
     /**
      * Empty the request cache only, as a worker does between two jobs.
+     *
+     * The persistent store gets another chance too: a worker that lives for hours
+     * must not stay cut off from Redis because of one failure a while ago.
      */
     public function flushRuntime(): bool
     {
         $this->runtime->deleteByPrefix($this->keys->siteScope());
+        $this->failure = null;
 
         return true;
     }

@@ -1,7 +1,14 @@
 {
     "name": "pollora/object-cache",
     "description": "A persistent Redis object cache for WordPress, built for Pollora and Laravel.",
-    "keywords": ["pollora", "wordpress", "laravel", "redis", "cache", "object-cache"],
+    "keywords": [
+        "pollora",
+        "wordpress",
+        "laravel",
+        "redis",
+        "cache",
+        "object-cache"
+    ],
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -12,10 +19,17 @@
         }
     ],
     "require": {
-        "php": "^8.3"
+        "php": "^8.3",
+        "illuminate/console": "^13.38",
+        "illuminate/container": "^13.38",
+        "illuminate/contracts": "^13.38",
+        "illuminate/support": "^13.38"
     },
     "require-dev": {
+        "antecedent/patchwork": "^2.2",
+        "brain/monkey": "^2.7",
         "laravel/pint": "^1.22.1",
+        "orchestra/testbench": "^11.0",
         "pestphp/pest": "^3.8.2",
         "phpstan/phpstan": "^2.1.16",
         "pollora/harness": "^0.1.34"
@@ -55,5 +69,12 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Pollora\\ObjectCache\\Infrastructure\\Laravel\\ObjectCacheServiceProvider"
+            ]
+        }
+    }
 }
