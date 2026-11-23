@@ -62,12 +62,29 @@ Publish it with `php artisan vendor:publish --tag=object-cache-config`, or set t
 | `allowed_classes` | | `true`: any class (or `false`, or a list) |
 | `max_ttl` | `OBJECT_CACHE_MAX_TTL` | `0`, no limit |
 | `global_groups`, `non_persistent_groups` | | `[]`; a name may end with `*` |
+| `prefetch.enabled` | `OBJECT_CACHE_PREFETCH` | `false` |
+| `prefetch.max_keys` | `OBJECT_CACHE_PREFETCH_MAX_KEYS` | `300` |
+| `prefetch.ttl` | `OBJECT_CACHE_PREFETCH_TTL` | `604800` seconds |
+| `prefetch.exclude_groups` | | `['userlogins']`; a name may end with `*` |
 | `laravel.group` | `OBJECT_CACHE_LARAVEL_GROUP` | `laravel` |
 | `laravel.flush_with_cache_clear` | `OBJECT_CACHE_FLUSH_WITH_CACHE_CLEAR` | `true` |
 
 - **Use a database of its own.** The default connection is `default`, not `cache`: Laravel's cache store empties its whole Redis database on `cache:clear`, and the object cache would go with it. Point `OBJECT_CACHE_REDIS_DATABASE` at a database nothing else uses if `default` is shared.
 - **The key prefix** tells sites apart on a shared Redis, and a flush only removes this site's keys. Left empty it is derived from the site URL, the database name and the table prefix, and `WP_CACHE_KEY_SALT` is honored when the project defines it. Every entry point (web, `artisan`, WP-CLI, queue workers) computes the same one, because it reads Laravel's configuration.
 - **Queue workers**: the request cache is emptied before each job, so a job never starts from what the previous one cached, and a worker gets another chance at Redis after an outage.
+
+## Prefetch
+
+A WordPress page reads a hundred keys or more, one call to Redis each. With the prefetch on (`OBJECT_CACHE_PREFETCH=true`), the pages of one kind remember what they read, and the next one loads those keys with a single call.
+
+- **A kind of page** is the first segment of the path (`/shop/...`, `/blog/...`, the home page), the blog of a network, and whether the visitor is signed in. The query string does not count.
+- **Which requests take part**: pages of the front, fetched with GET or HEAD. Console commands, the administration, AJAX, REST, cron and form submissions neither load nor record anything. A page that is not answered with a 200 writes nothing.
+- **The profile** is written when a request read keys it did not know, up to `max_keys`, and expires after `ttl` seconds without a rewrite. It lives under the site prefix, so `flush` removes it too. A page that brings few new keys does not rewrite a full profile.
+- **What is never loaded early**: non-persistent groups, `prefetch.exclude_groups`, and what a request wrote before its first read. A key changed or deleted since the profile was written is read from Redis as of the request, so the prefetch cannot serve an older value than a normal read would.
+- **Groups where a value read a moment too soon would be wrong** (sessions, logins) belong in `prefetch.exclude_groups`. Another package adds its own from a service provider's `register()`: `config()->push('pollora.object-cache.prefetch.exclude_groups', 'session_*')`.
+- If Redis stops answering while the profile is loaded, the request degrades as for any read.
+
+It is off by default: turn it on, measure the number of Redis commands per page (`redis-cli INFO commandstats`), and keep it if it falls.
 
 ## The Laravel cache driver
 

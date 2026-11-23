@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Prefetch (off by default, `prefetch.enabled`): the pages of one kind of the front (first path segment, blog, signed in or not) remember the keys they read, and the next one loads them with one call to Redis. Profiles are bounded (`prefetch.max_keys`, `prefetch.ttl`), flushed with the site, rewritten only when a request brings enough new keys, and never loaded for non-persistent groups or `prefetch.exclude_groups` (`userlogins` by default; other packages add theirs through the configuration). Console, administration, AJAX, REST, cron and non-GET requests take no part
+
 ## [0.1.0] - 2026-11-23
 
 ### Added
