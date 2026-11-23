@@ -15,6 +15,7 @@ use Pollora\ObjectCache\Infrastructure\Console\FlushCommand;
 use Pollora\ObjectCache\Infrastructure\Console\StatusCommand;
 use Pollora\ObjectCache\Infrastructure\Laravel\Cache\ObjectCacheStore;
 use Pollora\ObjectCache\Infrastructure\WordPress\DropInInstaller;
+use Pollora\ObjectCache\Infrastructure\WordPress\RequestSignature;
 use Pollora\ObjectCache\Infrastructure\WordPress\WordPressObjectCache;
 
 /**
@@ -51,6 +52,13 @@ final class ObjectCacheServiceProvider extends ServiceProvider
                 multisite: function_exists('is_multisite') && is_multisite(),
                 blogId: function_exists('get_current_blog_id') ? (int) get_current_blog_id() : 1,
                 salt: is_string($salt) ? $salt : null,
+                requestKind: RequestSignature::resolve(
+                    PHP_SAPI,
+                    $_SERVER,
+                    $_COOKIE,
+                    defined('WP_ADMIN') || defined('DOING_AJAX') || defined('DOING_CRON') || defined('REST_REQUEST') || defined('XMLRPC_REQUEST'),
+                    function_exists('get_current_blog_id') ? (int) get_current_blog_id() : 1,
+                ),
             );
         });
 

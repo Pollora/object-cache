@@ -66,3 +66,15 @@ it('accepts a group named like a number, which PHP turns into an integer key', f
         ->and($groups->isNonPersistent('wc_orders'))->toBeTrue()
         ->and($groups->isGlobal('9'))->toBeFalse();
 });
+
+it('keeps the groups the prefetch leaves alone, with wildcards', function (): void {
+    $groups = new GroupRegistry;
+    $groups->addNonPrefetchable(['userlogins', 'session_*']);
+    $groups->addNonPrefetchable('other');
+
+    expect($groups->isNonPrefetchable('userlogins'))->toBeTrue()
+        ->and($groups->isNonPrefetchable('session_42'))->toBeTrue()
+        ->and($groups->isNonPrefetchable('other'))->toBeTrue()
+        ->and($groups->isNonPrefetchable('posts'))->toBeFalse()
+        ->and($groups->isNonPersistent('userlogins'))->toBeFalse();
+});

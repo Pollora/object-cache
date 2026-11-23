@@ -9,6 +9,9 @@ use Pollora\ObjectCache\Domain\Contracts\CacheStore;
 use Pollora\ObjectCache\Domain\Exceptions\StoreUnavailableException;
 use Pollora\ObjectCache\Domain\GroupRegistry;
 use Pollora\ObjectCache\Domain\KeyBuilder;
+use Pollora\ObjectCache\Domain\Prefetch\AccessLog;
+use Pollora\ObjectCache\Domain\Prefetch\PrefetchPlan;
+use Pollora\ObjectCache\Domain\Prefetch\PrefetchProfile;
 use Pollora\ObjectCache\Domain\TtlPolicy;
 
 /**
@@ -31,12 +34,23 @@ use Pollora\ObjectCache\Domain\TtlPolicy;
  */
 final class ObjectCache
 {
+    /** The group that holds the prefetch profiles; never recorded, never loaded. */
+    public const string PROFILE_GROUP = 'object-cache-prefetch';
+
     private ?StoreUnavailableException $failure = null;
+
+    private bool $warmed = false;
+
+    private ?AccessLog $log = null;
+
+    /** @var list<array{0: string, 1: int|string, 2: int}> What the stored profile held when this request read it. */
+    private array $storedProfile = [];
 
     /**
      * @param  CacheStore  $persistent  Shared by every worker and every request (Redis).
      * @param  CacheStore  $runtime  Lives for one request.
      * @param  int  $blogId  The blog the cache starts on; see `switchToBlog()`.
+     * @param  PrefetchPlan|null  $prefetch  Loads, on the first read, the keys pages of this kind read before; null for none.
      */
     public function __construct(
         private readonly CacheStore $persistent,
@@ -45,6 +59,7 @@ final class ObjectCache
         private readonly GroupRegistry $groups,
         private readonly TtlPolicy $ttl = new TtlPolicy,
         private int $blogId = 1,
+        private readonly ?PrefetchPlan $prefetch = null,
     ) {}
 
     /**
@@ -55,7 +70,19 @@ final class ObjectCache
      */
     public function get(mixed $key, string $group = 'default', bool $force = false): ?CacheValue
     {
+        $this->warm();
         $group = KeyBuilder::normalizeGroup($group);
+        $value = $this->fetch($key, $group, $force);
+
+        if ($value instanceof CacheValue && ! $force) {
+            $this->note($key, $group);
+        }
+
+        return $value;
+    }
+
+    private function fetch(mixed $key, string $group, bool $force): ?CacheValue
+    {
         $storageKey = $this->storageKey($key, $group);
 
         if ($storageKey === null) {
@@ -98,7 +125,27 @@ final class ObjectCache
      */
     public function getMany(array $keys, string $group = 'default', bool $force = false): array
     {
+        $this->warm();
         $group = KeyBuilder::normalizeGroup($group);
+        $result = $this->fetchMany($keys, $group, $force);
+
+        if (! $force) {
+            foreach ($result as $key => $value) {
+                if ($value instanceof CacheValue) {
+                    $this->note($key, $group);
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $keys
+     * @return array<int|string, CacheValue|null>
+     */
+    private function fetchMany(array $keys, string $group, bool $force): array
+    {
         $result = [];
         $pending = [];
 
@@ -411,6 +458,100 @@ final class ObjectCache
     public function switchToBlog(int $blogId): void
     {
         $this->blogId = $blogId;
+    }
+
+    /**
+     * Write what this request read, so the next page of the same kind can load it in one call.
+     *
+     * Called when the request ends. Nothing is written for a request that had no plan, that
+     * did not end in a page (`$cacheable` false: an error, a redirect), that found Redis down,
+     * or that brought nothing new.
+     */
+    public function savePrefetch(bool $cacheable): void
+    {
+        if (! $this->prefetch instanceof PrefetchPlan || ! $this->log instanceof AccessLog || ! $cacheable || $this->failure instanceof StoreUnavailableException) {
+            return;
+        }
+
+        $merged = PrefetchProfile::merge($this->storedProfile, $this->log->entries(), $this->prefetch->maxKeys);
+
+        if ($merged === null) {
+            return;
+        }
+
+        try {
+            $this->persistent->set($this->profileKey(), ['e' => $merged], $this->ttl->normalize($this->prefetch->ttl));
+        } catch (StoreUnavailableException $storeUnavailableException) {
+            $this->failure = $storeUnavailableException;
+        }
+    }
+
+    /**
+     * On the first read, load every key the profile names with one call to the persistent store.
+     *
+     * The values go to the request cache, where a key this request already wrote is left alone.
+     * Done lazily, not when the cache is built: WordPress registers its non-persistent groups
+     * after that, and the registry must be complete to know what may be loaded.
+     */
+    private function warm(): void
+    {
+        if ($this->warmed || ! $this->prefetch instanceof PrefetchPlan) {
+            return;
+        }
+
+        $this->warmed = true;
+        $this->log = new AccessLog($this->prefetch->maxKeys);
+
+        if ($this->failure instanceof StoreUnavailableException) {
+            return;
+        }
+
+        try {
+            $profile = $this->persistent->get($this->profileKey());
+            $this->storedProfile = PrefetchProfile::parse($profile?->value);
+            $pending = [];
+
+            foreach ($this->storedProfile as [$group, $key, $blogId]) {
+                if ($this->prefetchable($group)) {
+                    $pending[] = $this->keys->key($group, $key, $this->groups->isGlobal($group), $blogId);
+                }
+            }
+
+            if ($pending === []) {
+                return;
+            }
+
+            foreach ($this->persistent->getMany($pending) as $storageKey => $value) {
+                if (! $this->runtime->get($storageKey) instanceof CacheValue) {
+                    $this->runtime->set($storageKey, $value->value, 0);
+                }
+            }
+        } catch (StoreUnavailableException $storeUnavailableException) {
+            $this->failure = $storeUnavailableException;
+        }
+    }
+
+    /**
+     * Note that a persistent group's key was read, for the profile of this kind of page.
+     */
+    private function note(mixed $key, string $group): void
+    {
+        if ($this->log instanceof AccessLog && (is_string($key) || is_int($key)) && $this->prefetchable($group)) {
+            $this->log->record($group, $key, $this->blogId);
+        }
+    }
+
+    /**
+     * Whether a group's values may be loaded before they are asked for.
+     */
+    private function prefetchable(string $group): bool
+    {
+        return $group !== self::PROFILE_GROUP && ! $this->groups->isNonPersistent($group) && ! $this->groups->isNonPrefetchable($group);
+    }
+
+    private function profileKey(): string
+    {
+        return $this->keys->key(self::PROFILE_GROUP, $this->prefetch->signature ?? '', true, 0);
     }
 
     /**

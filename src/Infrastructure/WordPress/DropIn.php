@@ -52,10 +52,12 @@ final class DropIn
     }
 
     /**
-     * Write the failure of Redis, if there was one, to the PHP error log.
+     * Save what the request read for the prefetch, then write the failure of Redis, if there was one, to the PHP error log.
      */
     public static function report(WordPressObjectCache $cache): void
     {
+        $cache->engine()->savePrefetch(http_response_code() === 200);
+
         $failure = $cache->engine()->failure();
 
         if ($failure instanceof StoreUnavailableException) {
