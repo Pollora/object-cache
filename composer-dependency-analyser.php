@@ -25,5 +25,5 @@ return (new Configuration)
     ->ignoreErrorsOnExtensions(['ext-ctype', 'ext-filter', 'ext-json', 'ext-mbstring', 'ext-redis', 'ext-igbinary'], [ErrorType::SHADOW_DEPENDENCY])
     // Testbench installs the laravel/framework monolith, which replaces the illuminate/* packages the code requires.
     ->ignoreErrorsOnPackage('laravel/framework', [ErrorType::SHADOW_DEPENDENCY])
-    ->ignoreErrorsOnPackages(['illuminate/console', 'illuminate/container', 'illuminate/contracts', 'illuminate/support'], [ErrorType::UNUSED_DEPENDENCY])
+    ->ignoreErrorsOnPackages(['illuminate/cache', 'illuminate/console', 'illuminate/container', 'illuminate/contracts', 'illuminate/support'], [ErrorType::UNUSED_DEPENDENCY])
     ->ignoreErrorsOnPath($root.'/tests', [ErrorType::UNKNOWN_CLASS, ErrorType::UNKNOWN_FUNCTION, ErrorType::SHADOW_DEPENDENCY]);

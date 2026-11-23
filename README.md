@@ -62,14 +62,32 @@ Publish it with `php artisan vendor:publish --tag=object-cache-config`, or set t
 | `allowed_classes` | | `true`: any class (or `false`, or a list) |
 | `max_ttl` | `OBJECT_CACHE_MAX_TTL` | `0`, no limit |
 | `global_groups`, `non_persistent_groups` | | `[]`; a name may end with `*` |
+| `laravel.group` | `OBJECT_CACHE_LARAVEL_GROUP` | `laravel` |
+| `laravel.flush_with_cache_clear` | `OBJECT_CACHE_FLUSH_WITH_CACHE_CLEAR` | `true` |
 
 - **Use a database of its own.** The default connection is `default`, not `cache`: Laravel's cache store empties its whole Redis database on `cache:clear`, and the object cache would go with it. Point `OBJECT_CACHE_REDIS_DATABASE` at a database nothing else uses if `default` is shared.
 - **The key prefix** tells sites apart on a shared Redis, and a flush only removes this site's keys. Left empty it is derived from the site URL, the database name and the table prefix, and `WP_CACHE_KEY_SALT` is honored when the project defines it. Every entry point (web, `artisan`, WP-CLI, queue workers) computes the same one, because it reads Laravel's configuration.
 - **Queue workers**: the request cache is emptied before each job, so a job never starts from what the previous one cached, and a worker gets another chance at Redis after an outage.
 
+## The Laravel cache driver
+
+Declare a store with the `wordpress` driver in `config/cache.php`:
+
+```php
+'stores' => [
+    'wordpress' => ['driver' => 'wordpress'],
+],
+```
+
+`Cache::store('wordpress')` then reads and writes the object cache, in one group (`laravel` by default), under the same site prefix as `wp_cache_*`: a value put from Laravel is readable from WordPress with `wp_cache_get($key, 'laravel')`. Reads always go to Redis, never to the request cache, so a counter or a flag written by another process is seen. `Cache::add()` is atomic. Tags are not supported. The events (`CacheHit`, `KeyWritten`…) are those of Laravel's repository, enabled like for any store.
+
+- **`Cache::flush()`** on this store empties its group only, never WordPress's own groups, and never the Redis database.
+- **`php artisan cache:clear`** also empties this site's object cache (only its keys), unless `laravel.flush_with_cache_clear` is `false`. When the cleared store is the `wordpress` one, only its group goes.
+- If Redis stops answering, reads miss and writes report `false`; nothing throws and `cache:clear` still succeeds.
+
 ## Planned
 
-- `0.1.0`: a Laravel cache driver on the same store (`Cache::store('wordpress')`), `cache:clear` emptying the object cache, a `pollora:doctor` check in the framework.
+- `0.1.0`: a `pollora:doctor` check in the framework.
 - `0.2.0`: prefetching by group, `alloptions` split into a hash, asynchronous flush, read replicas.
 
 ## Installation
