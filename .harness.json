@@ -1,6 +1,7 @@
 {
     "profile": "integration",
     "mode": "observe",
+    "services": ["redis"],
     "ratchet": {
         "phpstan_level": 5,
         "phpstan_baseline": 0,
