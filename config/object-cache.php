@@ -47,6 +47,17 @@ return [
     // The longest life of an entry, in seconds; 0 sets no limit.
     'max_ttl' => (int) env('OBJECT_CACHE_MAX_TTL', 0),
 
+    /*
+     * The `wordpress` cache driver (`'driver' => 'wordpress'` in a store of
+     * config/cache.php) and `php artisan cache:clear`.
+     */
+    'laravel' => [
+        // The object cache group holding what `Cache::store('wordpress')` writes.
+        'group' => env('OBJECT_CACHE_LARAVEL_GROUP', 'laravel'),
+        // Whether `cache:clear` also empties this site's object cache (only its keys, never the Redis database).
+        'flush_with_cache_clear' => (bool) env('OBJECT_CACHE_FLUSH_WITH_CACHE_CLEAR', true),
+    ],
+
     // Groups shared by every site of a network, and groups kept out of Redis. A name may end with `*`.
     'global_groups' => [],
     'non_persistent_groups' => [],

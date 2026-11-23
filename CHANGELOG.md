@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ObjectCacheServiceProvider` and the `pollora.object-cache` configuration (`config/object-cache.php`): connection read from Laravel's `database.redis`, a key prefix every entry point computes the same way (`WP_CACHE_KEY_SALT` honored), serializer, allowed classes, maximum TTL, groups
 - The request cache is emptied, and Redis tried again, before each queued job
 - The contract suite also runs on a real Redis, with the PHP and igbinary serializers, and covers integer limits, numeric strings and floats
+- The `wordpress` Laravel cache driver (`Cache::store('wordpress')`): `ObjectCacheStore` reads and writes the object cache in one group (`laravel.group`, default `laravel`), reads bypass the request cache, `Cache::add()` is atomic, `Cache::flush()` empties the group only
+- `php artisan cache:clear` also empties the site's object cache (`laravel.flush_with_cache_clear`, default `true`), by its key prefix, never the Redis database
 
 ### Fixed
 
