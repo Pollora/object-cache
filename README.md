@@ -27,7 +27,7 @@ This package implements the whole contract of `WP_Object_Cache`: `add`, `get`, `
 | --- | --- |
 | `Domain` | The `CacheStore` contract, key building, cache groups (with `wc_cache_*`-style wildcards), time-to-live policy. No WordPress, no Redis, no Laravel. |
 | `Application` | `ObjectCache`: every operation, over a persistent store and a request cache. |
-| `Infrastructure` | The stores (in memory, and Redis with phpredis), the value format, the connector and the clock; the WordPress facade and the drop-in; the Laravel service provider, configuration and Artisan commands. |
+| `Infrastructure` | The stores (in memory, and Redis with phpredis), the value format, the connector and the clock; the WordPress facade and the drop-in; the drop-in, the settings, the commands (WP-CLI) and the manager that both front-ends call. |
 
 Three decisions worth knowing:
 
