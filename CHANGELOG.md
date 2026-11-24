@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-24
+
 ### Fixed
 
 - The drop-in no longer stops the whole site when the Composer autoloader it names exists but the web server cannot open it: it tested `is_file()` and then `require_once` failed with a fatal error. It tests `is_readable()`, stays inert, and WordPress keeps its own cache.
