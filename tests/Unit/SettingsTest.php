@@ -75,3 +75,17 @@ it('takes the configured prefix first, then the salt, then a hash of the site', 
         ->and(SitePrefix::resolve(null, null, '', 'h', ''))->toBe('wp-'.substr(sha1('|h|'), 0, 12))
         ->and(SitePrefix::resolve(null, null, '', '', 'p_'))->toBe('wp-'.substr(sha1('||p_'), 0, 12));
 });
+
+it('reads a URL it cannot parse without a warning', function (): void {
+    set_error_handler(static function (int $level, string $message): never {
+        throw new ErrorException($message, 0, $level);
+    });
+
+    try {
+        $host = Settings::fromArray(['redis' => ['url' => 'http:///', 'host' => 'a.test']])->redis['host'];
+    } finally {
+        restore_error_handler();
+    }
+
+    expect($host)->toBe('a.test');
+});
