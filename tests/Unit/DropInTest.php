@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use Illuminate\Container\Container;
 use Pollora\ObjectCache\Domain\Exceptions\StoreUnavailableException;
 use Pollora\ObjectCache\Domain\Prefetch\PrefetchPlan;
 use Pollora\ObjectCache\Infrastructure\Stores\InMemoryCacheStore;
+use Pollora\ObjectCache\Infrastructure\WordPress\Configuration;
 use Pollora\ObjectCache\Infrastructure\WordPress\DropIn;
 use Pollora\ObjectCache\Infrastructure\WordPress\WordPressObjectCache;
 use Pollora\ObjectCache\Tests\Support\Caches;
@@ -13,32 +13,21 @@ use Pollora\ObjectCache\Tests\Support\CountingStore;
 use Pollora\ObjectCache\Tests\Support\UnavailableStore;
 
 afterEach(function (): void {
-    Container::setInstance(null);
+    Configuration::forget();
 });
 
-function bindObjectCache(): Container
-{
-    $container = new Container;
-    Container::setInstance($container);
-    $container->bind(WordPressObjectCache::class, static fn (): WordPressObjectCache => new WordPressObjectCache(Caches::make(new InMemoryCacheStore)));
-
-    return $container;
-}
-
-it('is not available when the package is not wired into the container', function (): void {
-    Container::setInstance(new Container);
-
+it('is not available when nothing configures the cache', function (): void {
     expect(DropIn::available())->toBeFalse();
 });
 
-it('is available when phpredis is loaded and the container holds the cache', function (): void {
-    bindObjectCache();
+it('is available when phpredis is loaded and a framework provides the settings', function (): void {
+    Configuration::provide(static fn (): array => []);
 
     expect(DropIn::available())->toBe(extension_loaded('redis'));
 });
 
-it('builds a fresh object cache from the container', function (): void {
-    bindObjectCache();
+it('builds a fresh object cache from the settings', function (): void {
+    Configuration::provide(static fn (): array => ['redis' => ['host' => '127.0.0.1', 'port' => 1, 'connect_timeout' => 0.2]]);
 
     $first = DropIn::create();
     $second = DropIn::create();

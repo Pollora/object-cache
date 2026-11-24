@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Pollora\ObjectCache\Infrastructure\WordPress;
 
-use Illuminate\Container\Container;
 use Pollora\ObjectCache\Domain\Exceptions\StoreUnavailableException;
+use Pollora\ObjectCache\Infrastructure\Config\Settings;
 
 /**
  * What the `object-cache.php` drop-in asks of the package.
@@ -23,14 +23,12 @@ final class DropIn
     private static bool $reporting = false;
 
     /**
-     * Whether the package can run: Laravel's container holds the object cache and
-     * phpredis is loaded.
+     * Whether the package can run: phpredis is loaded and something configures the cache
+     * (a framework's source, or the `WP_OBJECT_CACHE_CONFIG` constant).
      */
     public static function available(): bool
     {
-        return extension_loaded('redis')
-            && class_exists(Container::class)
-            && Container::getInstance()->bound(WordPressObjectCache::class);
+        return extension_loaded('redis') && Configuration::exists();
     }
 
     /**
@@ -41,7 +39,8 @@ final class DropIn
      */
     public static function create(): WordPressObjectCache
     {
-        $cache = Container::getInstance()->make(WordPressObjectCache::class);
+        $settings = Configuration::settings() ?? Settings::fromArray([]);
+        $cache = new WordPressObjectCache(EngineBuilder::build($settings, Environment::current()));
 
         if (! self::$reporting) {
             self::$reporting = true;

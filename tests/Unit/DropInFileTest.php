@@ -30,7 +30,7 @@ it('defines no wp_cache function without phpredis, so WordPress keeps its own ca
     expect($result)->toBe(['init' => false]);
 });
 
-it('defines no wp_cache function when the package is not wired into the container', function (): void {
+it('defines no wp_cache function when nothing configures the cache', function (): void {
     if (! extension_loaded('redis')) {
         $this->markTestSkipped('phpredis is not loaded.');
     }
@@ -61,5 +61,5 @@ it('defines every wp_cache function of the object cache API, and serves them', f
 });
 
 it('carries the marker the installer recognises it by', function (): void {
-    expect(file_get_contents(dirname(__DIR__, 2).'/resources/drop-in/object-cache.php'))->toContain('Pollora-Object-Cache-Drop-In: 1');
+    expect(file_get_contents(dirname(__DIR__, 2).'/resources/drop-in/object-cache.php'))->toContain('Pollora-Object-Cache-Drop-In: 2');
 });

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING**: the package no longer needs Laravel, and no longer contains anything of it. It requires PHP only and runs on a classic WordPress or Bedrock site. The service provider, the `wordpress` cache driver (`ObjectCacheStore`), the `cache:clear` and queue hooks, the Artisan commands and the Laravel configuration reading (`database.redis`, `pollora.object-cache.*`) move to the Pollora framework, which ships them.
+- The settings are one array: the `WP_OBJECT_CACHE_CONFIG` constant of `wp-config.php`, or what a framework registers with `Configuration::provide()`. `config/object-cache.php` lists the keys with their defaults (`redis.*` replaces `connection`; the `laravel.*` keys belong to the framework).
+- The key prefix of a site without a configured prefix comes from `WP_CACHE_KEY_SALT`, else from `DB_NAME`, `DB_HOST` and the table prefix (it no longer needs `app.url`, and never reads the database).
+- The drop-in does not use Laravel's container any more, and carries the path of the site's Composer autoloader (drop-in version 2: run `enable` again to update it).
+
+### Added
+
+- `wp object-cache enable|disable|status|flush` (WP-CLI), declared by the package's autoloader when the process is WP-CLI.
+- `Manager`, `Settings`, `Configuration`: what both front-ends (WP-CLI here, Artisan in the framework) call.
+
 ## [0.2.1] - 2026-11-24
 
 ### Changed

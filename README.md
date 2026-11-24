@@ -27,7 +27,7 @@ This package implements the whole contract of `WP_Object_Cache`: `add`, `get`, `
 | --- | --- |
 | `Domain` | The `CacheStore` contract, key building, cache groups (with `wc_cache_*`-style wildcards), time-to-live policy. No WordPress, no Redis, no Laravel. |
 | `Application` | `ObjectCache`: every operation, over a persistent store and a request cache. |
-| `Infrastructure` | The stores (in memory, and Redis with phpredis), the value format, the connector and the clock; the WordPress facade and the drop-in; the Laravel service provider, configuration and Artisan commands. |
+| `Infrastructure` | The stores (in memory, and Redis with phpredis), the value format, the connector and the clock; the WordPress facade and the drop-in; the drop-in, the settings, the commands (WP-CLI) and the manager that both front-ends call. |
 
 Three decisions worth knowing:
 
@@ -46,43 +46,48 @@ Three decisions worth knowing:
 
 ## Using it
 
+The package needs PHP and phpredis, nothing else: it runs on a classic WordPress, on Bedrock, and inside a Pollora project, where the framework configures it (see below).
+
 ```bash
 composer require pollora/object-cache
-php artisan pollora:object-cache:enable   # copies object-cache.php into the content directory
-php artisan pollora:object-cache:status   # drop-in, phpredis, Redis, key prefix
-php artisan pollora:object-cache:flush    # empties this site's keys, nothing else
-php artisan pollora:object-cache:disable  # removes the drop-in
+wp object-cache enable    # writes object-cache.php in the content directory
+wp object-cache status    # drop-in, phpredis, Redis, key prefix
+wp object-cache flush     # empties this site's keys, nothing else
+wp object-cache disable   # removes the drop-in
 ```
 
-`enable` and `disable` are idempotent. They only touch a drop-in this package wrote: another object cache's `object-cache.php` is left alone, and `enable --force` replaces it. A drop-in from an older version is updated by running `enable` again.
+`enable` and `disable` are idempotent. They only touch a drop-in this package wrote: another object cache's `object-cache.php` is left alone, and `enable --force` replaces it. A drop-in from an older version is updated by running `enable` again. The drop-in carries the path of the site's `vendor/autoload.php`, so a WordPress that does not load Composer's autoloader itself can still find the package.
 
-If phpredis is not loaded, or the package is not installed, the drop-in defines nothing and WordPress runs on its own in-memory cache, with no error. If Redis stops answering during a request, the request carries on from its request cache, stops asking Redis, and the failure goes to the PHP error log once.
+If phpredis is not loaded, or nothing configures the cache, the drop-in defines nothing and WordPress runs on its own in-memory cache, with no error. If Redis stops answering during a request, the request carries on from its request cache, stops asking Redis, and the failure goes to the PHP error log once.
 
 ### Configuration
 
-Publish it with `php artisan vendor:publish --tag=object-cache-config`, or set the environment variables. The settings live under `pollora.object-cache`; the connection itself (host, port, credentials) is read from Laravel's `database.redis`.
+Define the settings you change as an array in `wp-config.php`, before `wp-settings.php` is loaded. Every key is optional; `config/object-cache.php` lists them with their defaults.
 
-| Key | Environment | Default |
-| --- | --- | --- |
-| `connection` | `OBJECT_CACHE_REDIS_CONNECTION` | `default` |
-| `redis.database` | `OBJECT_CACHE_REDIS_DATABASE` | the connection's |
-| `redis.connect_timeout`, `redis.read_timeout` | `OBJECT_CACHE_CONNECT_TIMEOUT`, `OBJECT_CACHE_READ_TIMEOUT` | `1.0` seconds |
-| `redis.persistent` | `OBJECT_CACHE_PERSISTENT` | `false` |
-| `prefix` | `OBJECT_CACHE_PREFIX` | derived (below) |
-| `serializer` | `OBJECT_CACHE_SERIALIZER` | `php` (or `igbinary`) |
-| `allowed_classes` | | `true`: any class (or `false`, or a list) |
-| `max_ttl` | `OBJECT_CACHE_MAX_TTL` | `0`, no limit |
-| `global_groups`, `non_persistent_groups` | | `[]`; a name may end with `*` |
-| `prefetch.enabled` | `OBJECT_CACHE_PREFETCH` | `false` |
-| `prefetch.max_keys` | `OBJECT_CACHE_PREFETCH_MAX_KEYS` | `300` |
-| `prefetch.ttl` | `OBJECT_CACHE_PREFETCH_TTL` | `604800` seconds |
-| `prefetch.exclude_groups` | | `['userlogins']`; a name may end with `*` |
-| `laravel.group` | `OBJECT_CACHE_LARAVEL_GROUP` | `laravel` |
-| `laravel.flush_with_cache_clear` | `OBJECT_CACHE_FLUSH_WITH_CACHE_CLEAR` | `true` |
+```php
+define('WP_OBJECT_CACHE_CONFIG', [
+    'redis' => ['host' => '127.0.0.1', 'port' => 6379, 'database' => 5],
+    'prefetch' => ['enabled' => true, 'exclude_groups' => ['userlogins', 'wc_session_id', 'wc_cache_*']],
+]);
+```
 
-- **Use a database of its own.** The default connection is `default`, not `cache`: Laravel's cache store empties its whole Redis database on `cache:clear`, and the object cache would go with it. Point `OBJECT_CACHE_REDIS_DATABASE` at a database nothing else uses if `default` is shared.
-- **The key prefix** tells sites apart on a shared Redis, and a flush only removes this site's keys. Left empty it is derived from the site URL, the database name and the table prefix, and `WP_CACHE_KEY_SALT` is honored when the project defines it. Every entry point (web, `artisan`, WP-CLI, queue workers) computes the same one, because it reads Laravel's configuration.
-- **Queue workers**: the request cache is emptied before each job, so a job never starts from what the previous one cached, and a worker gets another chance at Redis after an outage.
+| Key | Default |
+| --- | --- |
+| `redis.url`, `redis.host`, `redis.port`, `redis.path` (socket) | `127.0.0.1`, `6379` |
+| `redis.username`, `redis.password`, `redis.database` | none, none, `0` |
+| `redis.connect_timeout`, `redis.read_timeout` | `1.0` seconds |
+| `redis.persistent` | `false` |
+| `prefix` | `WP_CACHE_KEY_SALT`, else derived from `DB_NAME`, `DB_HOST` and the table prefix |
+| `serializer` | `php` (or `igbinary`) |
+| `allowed_classes` | `true`: any class (or `false`, or a list) |
+| `max_ttl` | `0`, no limit |
+| `global_groups`, `non_persistent_groups` | `[]`; a name may end with `*` |
+| `prefetch.enabled`, `prefetch.max_keys`, `prefetch.ttl` | `false`, `300`, `604800` seconds |
+| `prefetch.exclude_groups` | `['userlogins']`; a name may end with `*` |
+
+- **Use a database of its own** (`redis.database`) if the default one is shared with something else.
+- **The key prefix** tells sites apart on a shared Redis, and a flush only removes this site's keys. It never needs the database: the cache is built before WordPress can read an option.
+- **In a Pollora project**, the framework registers its own settings source (`Configuration::provide()`), built from `config/database.php` and `config/object-cache.php`, and offers `Cache::store('wordpress')`, `pollora:object-cache:*` and the `cache:clear` hook. None of that lives in this package.
 
 ## Prefetch
 
@@ -97,22 +102,6 @@ A WordPress page reads a hundred keys or more, one call to Redis each. With the 
 - If Redis stops answering while the profile is loaded, the request degrades as for any read.
 
 It is off by default: turn it on, measure the number of Redis commands per page (`redis-cli INFO commandstats`), and keep it if it falls. On a development site (WordPress 7, WooCommerce, a Blade theme), once the profiles were written, the commands per request went from about 230 to 100-130 on the home page, from 203 to 126 on the shop page, and from 168 to 52 on a product page. A WooCommerce cart (add twice, read again, a second visitor) and a checkout through the Store API gave the same results with the prefetch on as without it.
-
-## The Laravel cache driver
-
-Declare a store with the `wordpress` driver in `config/cache.php`:
-
-```php
-'stores' => [
-    'wordpress' => ['driver' => 'wordpress'],
-],
-```
-
-`Cache::store('wordpress')` then reads and writes the object cache, in one group (`laravel` by default), under the same site prefix as `wp_cache_*`: a value put from Laravel is readable from WordPress with `wp_cache_get($key, 'laravel')`. Reads always go to Redis, never to the request cache, so a counter or a flag written by another process is seen. `Cache::add()` is atomic. Tags are not supported. The events (`CacheHit`, `KeyWritten`…) are those of Laravel's repository, enabled like for any store.
-
-- **`Cache::flush()`** on this store empties its group only, never WordPress's own groups, and never the Redis database.
-- **`php artisan cache:clear`** also empties this site's object cache (only its keys), unless `laravel.flush_with_cache_clear` is `false`. When the cleared store is the `wordpress` one, only its group goes.
-- If Redis stops answering, reads miss and writes report `false`; nothing throws and `cache:clear` still succeeds.
 
 ## Planned
 

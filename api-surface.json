@@ -1,16 +1,8 @@
 {
     "version": 1,
     "surface": {
-        "command:pollora:object-cache:disable": "command",
-        "command:pollora:object-cache:enable": "command",
-        "command:pollora:object-cache:flush": "command",
-        "command:pollora:object-cache:status": "command",
         "config:object-cache.allowed_classes": "key",
-        "config:object-cache.connection": "key",
         "config:object-cache.global_groups": "key",
-        "config:object-cache.laravel": "key",
-        "config:object-cache.laravel.flush_with_cache_clear": "key",
-        "config:object-cache.laravel.group": "key",
         "config:object-cache.max_ttl": "key",
         "config:object-cache.non_persistent_groups": "key",
         "config:object-cache.prefetch": "key",
@@ -22,8 +14,14 @@
         "config:object-cache.redis": "key",
         "config:object-cache.redis.connect_timeout": "key",
         "config:object-cache.redis.database": "key",
+        "config:object-cache.redis.host": "key",
+        "config:object-cache.redis.password": "key",
+        "config:object-cache.redis.path": "key",
         "config:object-cache.redis.persistent": "key",
+        "config:object-cache.redis.port": "key",
         "config:object-cache.redis.read_timeout": "key",
+        "config:object-cache.redis.url": "key",
+        "config:object-cache.redis.username": "key",
         "config:object-cache.serializer": "key"
     }
 }

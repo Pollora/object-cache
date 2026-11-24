@@ -11,8 +11,8 @@ use Pollora\ObjectCache\Infrastructure\Exceptions\ForeignDropInException;
  * Puts the package's `object-cache.php` in WordPress's content directory, and
  * takes it out.
  *
- * The drop-in is copied, not linked, so it keeps working if `vendor` is moved,
- * and the copy says which package wrote it: a file without that marker is
+ * The drop-in is written, not linked, so it keeps working if `vendor` is moved,
+ * and the file says which package wrote it: a file without that marker is
  * somebody else's object cache and is never overwritten or deleted unless the
  * caller forces the install.
  */
@@ -21,11 +21,15 @@ final readonly class DropInInstaller
     /** The header line that marks a drop-in as this package's. */
     public const string MARKER = 'Pollora-Object-Cache-Drop-In:';
 
+    /** What the shipped drop-in holds where the path of the Composer autoloader goes. */
+    public const string AUTOLOAD_PLACEHOLDER = '__POLLORA_OBJECT_CACHE_AUTOLOAD__';
+
     /**
      * @param  string  $source  The drop-in the package ships.
      * @param  string  $target  Where WordPress looks for it: `object-cache.php` in the content directory.
+     * @param  string  $autoload  The absolute path of the Composer autoloader the drop-in loads when nothing has loaded the package yet (a classic WordPress that does not load `vendor/autoload.php` itself); empty for none.
      */
-    public function __construct(private string $source, private string $target) {}
+    public function __construct(private string $source, private string $target, private string $autoload = '') {}
 
     /**
      * The place WordPress looks for the drop-in.
@@ -50,7 +54,7 @@ final readonly class DropInInstaller
             return DropInStatus::Foreign;
         }
 
-        return $installed === (string) file_get_contents($this->source) ? DropInStatus::Current : DropInStatus::Outdated;
+        return $installed === $this->render() ? DropInStatus::Current : DropInStatus::Outdated;
     }
 
     /**
@@ -100,11 +104,19 @@ final readonly class DropInInstaller
         return $before;
     }
 
+    /**
+     * The drop-in as it is written: the shipped file, with the path of the autoloader.
+     */
+    private function render(): string
+    {
+        return str_replace(self::AUTOLOAD_PLACEHOLDER, addslashes($this->autoload), (string) file_get_contents($this->source));
+    }
+
     private function copyDropIn(): bool
     {
         $directory = dirname($this->target);
 
-        return is_dir($directory) && is_writable($directory) && copy($this->source, $this->target);
+        return is_dir($directory) && is_writable($directory) && file_put_contents($this->target, $this->render()) !== false;
     }
 
     private function removeDropIn(): bool

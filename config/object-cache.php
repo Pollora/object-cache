@@ -7,56 +7,57 @@ declare(strict_types=1);
 | Pollora Object Cache
 |--------------------------------------------------------------------------
 |
-| Merged under `pollora.object-cache`. The connection parameters are read from
-| Laravel's `database.redis.<connection>`; only the keys below are specific to
-| the object cache.
+| The settings, with their defaults. Every key is optional.
+|
+| On a classic WordPress or Bedrock site, define the ones you change as an array
+| in wp-config.php, before wp-settings.php is loaded:
+|
+|     define('WP_OBJECT_CACHE_CONFIG', [
+|         'redis' => ['host' => '127.0.0.1', 'port' => 6379, 'database' => 5],
+|         'prefetch' => ['enabled' => true],
+|     ]);
+|
+| In a Pollora project, the framework builds the same array from `config/database.php`
+| and `config/object-cache.php` of the project.
 |
 */
 return [
-    /*
-     * The `database.redis` connection to take host, port, credentials and
-     * database from. `default` and not `cache`: Laravel's cache store flushes
-     * its whole database on `cache:clear`, and the object cache must not share
-     * a database with it unless you want one to empty the other.
-     */
-    'connection' => env('OBJECT_CACHE_REDIS_CONNECTION', 'default'),
-
     'redis' => [
-        // A database of its own, when the connection's one is shared with something else.
-        'database' => env('OBJECT_CACHE_REDIS_DATABASE'),
+        // `redis://user:password@host:6379/2`: fills what the keys below leave out.
+        'url' => null,
+        'host' => '127.0.0.1',
+        'port' => 6379,
+        // A Unix socket: replaces host and port.
+        'path' => null,
+        'username' => null,
+        'password' => null,
+        // A database of its own: the cache of this site is empty after `flush`, never the database.
+        'database' => 0,
         // Seconds. Without a limit phpredis waits for the PHP socket timeout (60 s) when Redis stops answering.
-        'connect_timeout' => (float) env('OBJECT_CACHE_CONNECT_TIMEOUT', 1.0),
-        'read_timeout' => (float) env('OBJECT_CACHE_READ_TIMEOUT', 1.0),
-        'persistent' => (bool) env('OBJECT_CACHE_PERSISTENT', false),
+        'connect_timeout' => 1.0,
+        'read_timeout' => 1.0,
+        'persistent' => false,
     ],
 
     /*
-     * Identifies the site on a shared Redis, so two sites never read each
-     * other's keys and a flush only empties this one. Left empty, it is derived
-     * from the site URL, the database name and the table prefix, or taken from
-     * WP_CACHE_KEY_SALT when the project defines it.
+     * Identifies the site on a shared Redis, so two sites never read each other's
+     * keys and a flush only empties this one. Left empty it is WP_CACHE_KEY_SALT
+     * when the project defines it, else derived from DB_NAME, DB_HOST and the table prefix.
      */
-    'prefix' => env('OBJECT_CACHE_PREFIX'),
+    'prefix' => null,
 
     // How arrays and objects are written: `php` or `igbinary`.
-    'serializer' => env('OBJECT_CACHE_SERIALIZER', 'php'),
+    'serializer' => 'php',
 
     // Classes `unserialize()` may rebuild: true for any (plugins cache objects of their own), false for none, or a list of class names.
     'allowed_classes' => true,
 
     // The longest life of an entry, in seconds; 0 sets no limit.
-    'max_ttl' => (int) env('OBJECT_CACHE_MAX_TTL', 0),
+    'max_ttl' => 0,
 
-    /*
-     * The `wordpress` cache driver (`'driver' => 'wordpress'` in a store of
-     * config/cache.php) and `php artisan cache:clear`.
-     */
-    'laravel' => [
-        // The object cache group holding what `Cache::store('wordpress')` writes.
-        'group' => env('OBJECT_CACHE_LARAVEL_GROUP', 'laravel'),
-        // Whether `cache:clear` also empties this site's object cache (only its keys, never the Redis database).
-        'flush_with_cache_clear' => (bool) env('OBJECT_CACHE_FLUSH_WITH_CACHE_CLEAR', true),
-    ],
+    // Groups shared by every site of a network, and groups kept out of Redis. A name may end with `*`.
+    'global_groups' => [],
+    'non_persistent_groups' => [],
 
     /*
      * Prefetch: pages of one kind (the first segment of the path, signed in or not)
@@ -65,16 +66,13 @@ return [
      * with GET or HEAD, take part; a page that is not answered with a 200 writes nothing.
      */
     'prefetch' => [
-        'enabled' => (bool) env('OBJECT_CACHE_PREFETCH', false),
+        'enabled' => false,
         // The most keys a profile holds, and the most one page records.
-        'max_keys' => (int) env('OBJECT_CACHE_PREFETCH_MAX_KEYS', 300),
+        'max_keys' => 300,
         // Seconds a profile lives without being rewritten.
-        'ttl' => (int) env('OBJECT_CACHE_PREFETCH_TTL', 604800),
-        // Groups never loaded early, because a value read a moment too soon would be wrong. A name may end with `*`.
+        'ttl' => 604800,
+        // Groups never loaded early, because a value read a moment too soon would be wrong
+        // (sessions, logins). A name may end with `*`. WooCommerce: add 'wc_session_id' and 'wc_cache_*'.
         'exclude_groups' => ['userlogins'],
     ],
-
-    // Groups shared by every site of a network, and groups kept out of Redis. A name may end with `*`.
-    'global_groups' => [],
-    'non_persistent_groups' => [],
 ];
