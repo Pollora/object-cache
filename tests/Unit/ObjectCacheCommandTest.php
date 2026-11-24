@@ -97,10 +97,12 @@ it('empties the keys of the site, and refuses without settings', function (): vo
 
     ($this->command)($live)->flush();
     ($this->command)(null)->flush();
+    ($this->command)(Settings::fromArray(['redis' => ['port' => 1, 'connect_timeout' => 0.2]]))->flush();
     $left = $store->get('cli-test:posts:1k');
 
     expect($left)->toBeNull()
         ->and($this->output->success)->toBe(['Emptied the keys of this site.'])
-        ->and($this->output->error)->toHaveCount(1)
-        ->and($this->output->error[0])->toContain('WP_OBJECT_CACHE_CONFIG');
+        ->and($this->output->error)->toHaveCount(2)
+        ->and($this->output->error[0])->toContain('WP_OBJECT_CACHE_CONFIG')
+        ->and($this->output->error[1])->toBe('Redis could not be reached, nothing was flushed.');
 });

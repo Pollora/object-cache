@@ -132,7 +132,12 @@ final readonly class ObjectCacheCommand
             return;
         }
 
-        ($this->manager)()->flush($settings);
+        if (! ($this->manager)()->flush($settings)) {
+            $this->output->error('Redis could not be reached, nothing was flushed.');
+
+            return;
+        }
+
         $this->output->success('Emptied the keys of this site.');
     }
 }

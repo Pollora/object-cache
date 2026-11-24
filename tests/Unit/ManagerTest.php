@@ -83,6 +83,12 @@ it('empties this site only', function (): void {
         ->and($store->get('another-site:posts:1k'))->not->toBeNull();
 });
 
+it('says nothing was emptied when Redis cannot be reached', function (): void {
+    $dead = Settings::fromArray(['prefix' => 'manager-test', 'redis' => ['port' => 1, 'connect_timeout' => 0.2]]);
+
+    expect($this->manager->flush($dead))->toBeFalse();
+});
+
 /**
  * A package directory under a vendor directory, with a drop-in to ship; the test directory holds it all.
  */

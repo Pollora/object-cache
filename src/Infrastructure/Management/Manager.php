@@ -58,10 +58,15 @@ final readonly class Manager
 
     /**
      * Empty this site's keys, and nothing else.
+     *
+     * @return bool False when Redis could not be reached, so nothing was emptied.
      */
     public function flush(Settings $settings): bool
     {
-        return EngineBuilder::build($settings, $this->environment, false)->flush();
+        $cache = EngineBuilder::build($settings, $this->environment, false);
+        $cache->flush();
+
+        return ! $cache->isDegraded();
     }
 
     /**
