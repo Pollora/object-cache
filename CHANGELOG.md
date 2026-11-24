@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-24
+
+### Changed
+
+- `DropInInstaller` throws `DropInFileException` (a `RuntimeException`) when it cannot write or remove `object-cache.php`, with a message that says what to check, instead of a bare `RuntimeException`
+- The prefetch's first-segment pattern is anchored with `\z`, so a path segment followed by a line break is no longer taken for a valid one
+- `unserialize()` in `ValueCodec` carries a `nosemgrep` that says why it is there: the bytes are what the package wrote to its own keys, and `allowed_classes` decides which classes are rebuilt
+- `DropIn::report()` takes the HTTP status of the response as an optional argument, and `PhpRedisConnector::credentials()` gives what `AUTH` receives, so both can be tested
+
+### Fixed
+
+- Line coverage as the harness counts it is back to 100 % (the failure paths of the prefetch and the plan built by the factory were not covered), and the mutation score is back to 96 % (49 survivors out of 1 242), the quality gates now being blocking (`enforce`)
+
 ## [0.2.0] - 2026-11-23
 
 ### Added
