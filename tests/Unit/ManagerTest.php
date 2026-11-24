@@ -6,6 +6,7 @@ use Pollora\ObjectCache\Infrastructure\Config\Settings;
 use Pollora\ObjectCache\Infrastructure\Management\Manager;
 use Pollora\ObjectCache\Infrastructure\WordPress\DropInInstaller;
 use Pollora\ObjectCache\Infrastructure\WordPress\DropInStatus;
+use Pollora\ObjectCache\Tests\Support\Environments;
 use Pollora\ObjectCache\Tests\Support\RedisHarness;
 
 beforeEach(function (): void {
@@ -13,12 +14,14 @@ beforeEach(function (): void {
     mkdir($this->dir);
     $this->source = $this->dir.'/source.php';
     file_put_contents($this->source, "<?php\n// ".DropInInstaller::MARKER." 2\n");
-    $this->manager = new Manager(new DropInInstaller($this->source, $this->dir.'/object-cache.php'));
+    $this->manager = new Manager(new DropInInstaller($this->source, $this->dir.'/object-cache.php'), Environments::make());
 });
 
 afterEach(function (): void {
-    foreach (glob($this->dir.'/*') ?: [] as $file) {
-        unlink($file);
+    $items = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($this->dir, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST);
+
+    foreach ($items as $item) {
+        $item->isDir() ? rmdir($item->getPathname()) : unlink($item->getPathname());
     }
 
     rmdir($this->dir);
@@ -80,8 +83,41 @@ it('empties this site only', function (): void {
         ->and($store->get('another-site:posts:1k'))->not->toBeNull();
 });
 
-it('puts the drop-in in the content directory of WordPress, with the autoloader path of the site', function (): void {
-    $manager = Manager::forWordPress();
+/**
+ * A package directory under a vendor directory, with a drop-in to ship; the test directory holds it all.
+ */
+function packageUnder(string $base, bool $underVendor): string
+{
+    $root = $underVendor ? $base.'/vendor/pollora/object-cache' : $base.'/pkg';
+    mkdir($root.'/resources/drop-in', 0777, true);
+    file_put_contents($root.'/resources/drop-in/object-cache.php', "<?php\n// ".DropInInstaller::MARKER." 2\n\$a = '".DropInInstaller::AUTOLOAD_PLACEHOLDER."';\n");
 
-    expect($manager->status(null)->lines['Drop-in'])->toContain('object-cache.php');
+    if ($underVendor) {
+        file_put_contents($base.'/vendor/autoload.php', '<?php');
+    }
+
+    return $root;
+}
+
+it('puts the drop-in in the content directory of the environment, with the autoloader path of the site', function (): void {
+    $root = packageUnder($this->dir, true);
+    mkdir($this->dir.'/content');
+
+    $manager = Manager::forWordPress(Environments::make(contentDir: $this->dir.'/content/'), $root);
+    $manager->enable();
+
+    expect((string) file_get_contents($this->dir.'/content/object-cache.php'))->toContain("\$a = '".$this->dir."/vendor/autoload.php';")
+        ->and($manager->status(null)->lines['Drop-in'])->toBe('current ('.$this->dir.'/content/object-cache.php)');
+});
+
+it('writes no autoloader path when the package is not under a vendor directory, and defaults to wp-content', function (): void {
+    $root = packageUnder($this->dir, false);
+
+    expect(Manager::forWordPress(Environments::make(), $root)->status(null)->lines['Drop-in'])->toBe('missing (wp-content/object-cache.php)');
+});
+
+it('uses its own package directory by default', function (): void {
+    Manager::forWordPress(Environments::make(contentDir: $this->dir))->enable();
+
+    expect((string) file_get_contents($this->dir.'/object-cache.php'))->toContain(DropInInstaller::MARKER);
 });

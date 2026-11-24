@@ -10,6 +10,7 @@ use Pollora\ObjectCache\Infrastructure\Redis\PhpRedisConnector;
 use Pollora\ObjectCache\Infrastructure\WordPress\DropInInstaller;
 use Pollora\ObjectCache\Infrastructure\WordPress\DropInStatus;
 use Pollora\ObjectCache\Infrastructure\WordPress\EngineBuilder;
+use Pollora\ObjectCache\Infrastructure\WordPress\Environment;
 use Pollora\ObjectCache\Infrastructure\WordPress\WordPressObjectCache;
 use RedisException;
 
@@ -19,19 +20,20 @@ use RedisException;
  */
 final readonly class Manager
 {
-    public function __construct(private DropInInstaller $installer) {}
+    public function __construct(private DropInInstaller $installer, private Environment $environment) {}
 
     /**
-     * A manager for the running WordPress: the drop-in goes to `object-cache.php` of the
-     * content directory, and carries the path of the Composer autoloader the package is under.
+     * A manager for a WordPress: the drop-in goes to `object-cache.php` of its content directory,
+     * and carries the path of the Composer autoloader the package is installed under, when there is one.
+     *
+     * @param  string|null  $packageRoot  Where the package is; its own directory by default.
      */
-    public static function forWordPress(): self
+    public static function forWordPress(Environment $environment, ?string $packageRoot = null): self
     {
-        $root = dirname(__DIR__, 3);
+        $root = $packageRoot ?? dirname(__DIR__, 3);
         $autoload = dirname($root, 2).'/autoload.php';
-        $content = defined('WP_CONTENT_DIR') && is_string(constant('WP_CONTENT_DIR')) ? constant('WP_CONTENT_DIR') : (defined('ABSPATH') && is_string(constant('ABSPATH')) ? constant('ABSPATH').'wp-content' : 'wp-content');
 
-        return new self(new DropInInstaller($root.'/resources/drop-in/object-cache.php', rtrim($content, '/').'/object-cache.php', is_file($autoload) ? $autoload : ''));
+        return new self(new DropInInstaller($root.'/resources/drop-in/object-cache.php', rtrim($environment->contentDir ?? 'wp-content', '/').'/object-cache.php', is_file($autoload) ? $autoload : ''), $environment);
     }
 
     /**
@@ -59,7 +61,7 @@ final readonly class Manager
      */
     public function flush(Settings $settings): bool
     {
-        return EngineBuilder::build($settings, false)->flush();
+        return EngineBuilder::build($settings, $this->environment, false)->flush();
     }
 
     /**
@@ -77,7 +79,7 @@ final readonly class Manager
             'Drop-in' => $dropIn->value.' ('.$this->installer->target().')',
             'phpredis' => $extension ? 'loaded' : 'missing',
             'Redis' => $redis,
-            'Key prefix' => $settings instanceof Settings ? EngineBuilder::prefix($settings) : '-',
+            'Key prefix' => $settings instanceof Settings ? EngineBuilder::prefix($settings, $this->environment) : '-',
             'Serializer' => $settings instanceof Settings ? $settings->serializer : '-',
             'Prefetch' => $settings instanceof Settings && $settings->prefetchEnabled ? 'on' : 'off',
             'Used by this process' => ($GLOBALS['wp_object_cache'] ?? null) instanceof WordPressObjectCache ? 'yes' : 'no',

@@ -6,6 +6,7 @@ use Pollora\ObjectCache\Infrastructure\Config\Settings;
 use Pollora\ObjectCache\Infrastructure\Management\Manager;
 use Pollora\ObjectCache\Infrastructure\WordPress\DropInInstaller;
 use Pollora\ObjectCache\Infrastructure\WpCli\ObjectCacheCommand;
+use Pollora\ObjectCache\Tests\Support\Environments;
 use Pollora\ObjectCache\Tests\Support\RecordingOutput;
 use Pollora\ObjectCache\Tests\Support\RedisHarness;
 
@@ -17,7 +18,7 @@ beforeEach(function (): void {
     $this->output = new RecordingOutput;
     $this->settings = Settings::fromArray(['prefix' => 'cli-test', 'redis' => ['host' => '127.0.0.1', 'port' => 1, 'connect_timeout' => 0.2]]);
     $this->command = fn (?Settings $settings): ObjectCacheCommand => new ObjectCacheCommand(
-        fn (): Manager => new Manager(new DropInInstaller($this->dir.'/source.php', $this->target)),
+        fn (): Manager => new Manager(new DropInInstaller($this->dir.'/source.php', $this->target), Environments::make()),
         $this->output,
         fn (): ?Settings => $settings,
     );
@@ -59,7 +60,7 @@ it('warns that nothing configures the cache', function (): void {
 
 it('reports a drop-in that cannot be written', function (): void {
     $command = new ObjectCacheCommand(
-        fn (): Manager => new Manager(new DropInInstaller($this->dir.'/source.php', $this->dir.'/missing-dir/object-cache.php')),
+        fn (): Manager => new Manager(new DropInInstaller($this->dir.'/source.php', $this->dir.'/missing-dir/object-cache.php'), Environments::make()),
         $this->output,
         fn (): ?Settings => $this->settings,
     );

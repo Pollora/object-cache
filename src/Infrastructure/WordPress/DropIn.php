@@ -40,7 +40,7 @@ final class DropIn
     public static function create(): WordPressObjectCache
     {
         $settings = Configuration::settings() ?? Settings::fromArray([]);
-        $cache = new WordPressObjectCache(EngineBuilder::build($settings));
+        $cache = new WordPressObjectCache(EngineBuilder::build($settings, Environment::current()));
 
         if (! self::$reporting) {
             self::$reporting = true;
