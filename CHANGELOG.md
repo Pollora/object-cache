@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-24
+
 ### Changed
 
 - **BREAKING**: the package no longer needs Laravel, and no longer contains anything of it. It requires PHP only and runs on a classic WordPress or Bedrock site. The service provider, the `wordpress` cache driver (`ObjectCacheStore`), the `cache:clear` and queue hooks, the Artisan commands and the Laravel configuration reading (`database.redis`, `pollora.object-cache.*`) move to the Pollora framework, which ships them.
