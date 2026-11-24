@@ -1,11 +1,12 @@
 {
     "profile": "integration",
-    "mode": "observe",
+    "mode": "enforce",
     "services": ["redis"],
     "ratchet": {
         "phpstan_level": 5,
         "phpstan_baseline": 0,
         "coverage": 100,
-        "msi": 94.7
+        "msi": 96.0,
+        "type_coverage": 94.4
     }
 }
