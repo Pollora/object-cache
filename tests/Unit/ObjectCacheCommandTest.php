@@ -91,7 +91,8 @@ it('shows the status, and fails when the cache does not work', function (): void
 });
 
 it('empties the keys of the site, and refuses without settings', function (): void {
-    (new RedisHarness)->store();
+    $store = (new RedisHarness)->store();
+    $store->set('cli-test:posts:1k', 'v', 0);
     $live = Settings::fromArray(['prefix' => 'cli-test', 'redis' => ['host' => getenv('REDIS_HOST') ?: '127.0.0.1', 'port' => (int) (getenv('REDIS_PORT') ?: 6379), 'database' => RedisHarness::database()]]);
 
     ($this->command)($live)->flush();
