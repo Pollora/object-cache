@@ -19,30 +19,29 @@
         }
     ],
     "require": {
-        "php": "^8.3",
-        "illuminate/cache": "^13.38",
-        "illuminate/console": "^13.38",
-        "illuminate/container": "^13.38",
-        "illuminate/contracts": "^13.38",
-        "illuminate/support": "^13.38"
+        "php": "^8.3"
     },
     "require-dev": {
         "antecedent/patchwork": "^2.2",
         "brain/monkey": "^2.7",
         "laravel/pint": "^1.22.1",
-        "orchestra/testbench": "^11.0",
         "pestphp/pest": "^3.8.2",
+        "php-stubs/wp-cli-stubs": "^2.12",
         "phpstan/phpstan": "^2.1.16",
         "pollora/harness": "^0.1.35"
     },
     "suggest": {
         "ext-redis": "Required to reach Redis with phpredis; without it the object cache falls back to WordPress's in-memory cache.",
-        "ext-igbinary": "A faster, smaller serializer for cached values."
+        "ext-igbinary": "A faster, smaller serializer for cached values.",
+        "wp-cli/wp-cli": "Runs `wp object-cache enable|disable|status|flush` on a classic WordPress or Bedrock site."
     },
     "autoload": {
         "psr-4": {
             "Pollora\\ObjectCache\\": "src/"
-        }
+        },
+        "files": [
+            "src/Infrastructure/WpCli/register.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
@@ -70,12 +69,5 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true,
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Pollora\\ObjectCache\\Infrastructure\\Laravel\\ObjectCacheServiceProvider"
-            ]
-        }
-    }
+    "prefer-stable": true
 }

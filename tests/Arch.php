@@ -13,3 +13,10 @@ use Pollora\Harness\Pest\Architecture;
  */
 
 Architecture::for(dirname(__DIR__))->register();
+
+/*
+ * The package runs on a classic WordPress or Bedrock site: no framework in it.
+ */
+arch('nothing in the package depends on Laravel')
+    ->expect('Pollora\ObjectCache')
+    ->not->toUse(['Illuminate', 'Laravel']);

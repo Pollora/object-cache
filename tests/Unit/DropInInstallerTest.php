@@ -126,3 +126,20 @@ it('fails clearly when it cannot remove', function (): void {
         rmdir($dir);
     }
 });
+
+it('writes the autoloader path into the drop-in, and calls the file current only with that path', function (): void {
+    file_put_contents($this->source, "<?php\n// ".DropInInstaller::MARKER." 2\n\$a = '".DropInInstaller::AUTOLOAD_PLACEHOLDER."';\n");
+    $installer = new DropInInstaller($this->source, $this->target, '/srv/site/vendor/autoload.php');
+    $installer->install();
+
+    expect(file_get_contents($this->target))->toContain("'/srv/site/vendor/autoload.php'")
+        ->and($installer->status())->toBe(DropInStatus::Current)
+        ->and((new DropInInstaller($this->source, $this->target, '/other/autoload.php'))->status())->toBe(DropInStatus::Outdated);
+});
+
+it('writes an empty path when the site has no autoloader to name', function (): void {
+    file_put_contents($this->source, "<?php\n// ".DropInInstaller::MARKER." 2\n\$a = '".DropInInstaller::AUTOLOAD_PLACEHOLDER."';\n");
+    (new DropInInstaller($this->source, $this->target))->install();
+
+    expect(file_get_contents($this->target))->toContain("\$a = '';");
+});

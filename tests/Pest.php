@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Brain\Monkey;
-use Pollora\ObjectCache\Tests\Feature\FeatureTestCase;
 
 /*
 |--------------------------------------------------------------------------
@@ -11,12 +10,9 @@ use Pollora\ObjectCache\Tests\Feature\FeatureTestCase;
 |--------------------------------------------------------------------------
 |
 | WordPress functions are stubbed with Brain Monkey, and Mockery's expectations
-| count as assertions. The Feature tests boot a Laravel application with
-| Testbench, to test the service provider and the commands.
+| count as assertions.
 |
 */
-
-pest()->extend(FeatureTestCase::class)->in('Feature');
 
 pest()->beforeEach(function (): void {
     Monkey\setUp();
@@ -26,4 +22,4 @@ pest()->beforeEach(function (): void {
     }
 
     Monkey\tearDown();
-})->in('Unit', 'Feature');
+})->in('Unit');

@@ -1,10 +1,7 @@
 <?php
 
 declare(strict_types=1);
-use Illuminate\Container\Container;
-use Pollora\ObjectCache\Infrastructure\Stores\InMemoryCacheStore;
-use Pollora\ObjectCache\Infrastructure\WordPress\WordPressObjectCache;
-use Pollora\ObjectCache\Tests\Support\Caches;
+use Pollora\ObjectCache\Infrastructure\WordPress\Configuration;
 
 /*
  * Loads the drop-in in a PHP process of its own, the way WordPress does, and
@@ -33,14 +30,11 @@ if ($mode === 'bare') {
 }
 
 if ($mode === 'use') {
-    $container = new Container;
-    Container::setInstance($container);
-    $container->bind(
-        WordPressObjectCache::class,
-        static fn (): WordPressObjectCache => new WordPressObjectCache(
-            Caches::make(new InMemoryCacheStore),
-        ),
-    );
+    Configuration::provide(static fn (): array => ['redis' => [
+        'host' => getenv('REDIS_HOST') ?: '127.0.0.1',
+        'port' => (int) (getenv('REDIS_PORT') ?: 6379),
+        'database' => (int) (getenv('OBJECT_CACHE_TEST_REDIS_DB') ?: 15),
+    ]]);
 }
 
 require $dropIn;

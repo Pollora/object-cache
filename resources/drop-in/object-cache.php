@@ -2,18 +2,28 @@
 
 /**
  * Plugin Name: Pollora Object Cache
- * Description: A persistent object cache for WordPress, on Redis. Installed by pollora/object-cache: do not edit, run `php artisan pollora:object-cache:enable` to update it.
- * Pollora-Object-Cache-Drop-In: 1
+ * Description: A persistent object cache for WordPress, on Redis. Installed by pollora/object-cache: do not edit, run `wp object-cache enable` (or `php artisan pollora:object-cache:enable` in a Pollora project) to update it.
+ * Pollora-Object-Cache-Drop-In: 2
  *
  * This file only decides whether the package can run and hands every call over
  * to it. When it cannot (the package is not installed, or phpredis is missing)
  * it defines nothing, so WordPress finds no `wp_cache_init()` and uses its own
- * in-memory cache. Remove the file with `pollora:object-cache:disable`.
+ * in-memory cache. Remove the file with `wp object-cache disable` (or
+ * `pollora:object-cache:disable`).
  */
 
 declare(strict_types=1);
 
 use Pollora\ObjectCache\Infrastructure\WordPress\DropIn;
+
+// Written by the installer: the Composer autoloader of the site, for a WordPress that has not loaded it yet.
+$pollora_object_cache_autoload = '__POLLORA_OBJECT_CACHE_AUTOLOAD__';
+
+if (! class_exists(DropIn::class, false) && is_file($pollora_object_cache_autoload)) {
+    require_once $pollora_object_cache_autoload;
+}
+
+unset($pollora_object_cache_autoload);
 
 if (class_exists(DropIn::class) && DropIn::available()) {
     /**
