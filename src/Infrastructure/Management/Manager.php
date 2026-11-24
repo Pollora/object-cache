@@ -79,16 +79,45 @@ final readonly class Manager
         $dropIn = $this->installer->status();
         $extension = extension_loaded('redis');
         $redis = $settings instanceof Settings ? $this->redis($settings, $extension) : 'not configured: define WP_OBJECT_CACHE_CONFIG';
+        $autoload = $this->installer->autoload();
+        $reachable = $autoload === '' || is_readable($autoload);
 
         return new StatusReport([
             'Drop-in' => $dropIn->value.' ('.$this->installer->target().')',
             'phpredis' => $extension ? 'loaded' : 'missing',
+            'Autoloader' => $this->autoloadLine($autoload, $reachable),
             'Redis' => $redis,
             'Key prefix' => $settings instanceof Settings ? EngineBuilder::prefix($settings, $this->environment) : '-',
             'Serializer' => $settings instanceof Settings ? $settings->serializer : '-',
             'Prefetch' => $settings instanceof Settings && $settings->prefetchEnabled ? 'on' : 'off',
             'Used by this process' => ($GLOBALS['wp_object_cache'] ?? null) instanceof WordPressObjectCache ? 'yes' : 'no',
-        ], $dropIn === DropInStatus::Current && $extension && str_starts_with($redis, 'reachable'));
+        ], $dropIn === DropInStatus::Current && $extension && $reachable && str_starts_with($redis, 'reachable'));
+    }
+
+    /**
+     * What `status` says of the autoloader the drop-in loads.
+     *
+     * Only this user can be asked whether the path is readable. A path under the home directory of
+     * the user who runs the command (where `wp package install` puts a package) is flagged,
+     * because the web server usually cannot read it, and the cache then stays off without an error.
+     */
+    private function autoloadLine(string $autoload, bool $reachable): string
+    {
+        if ($autoload === '') {
+            return 'none (WordPress must load the package itself)';
+        }
+
+        if (! $reachable) {
+            return $autoload.' (not readable by this user)';
+        }
+
+        $home = $this->environment->server['HOME'] ?? null;
+
+        if (is_string($home) && $home !== '' && str_starts_with($autoload, rtrim($home, '/').'/')) {
+            return $autoload.' (in the home directory: the web server must be able to read it, or the cache stays off without an error)';
+        }
+
+        return $autoload;
     }
 
     private function redis(Settings $settings, bool $extension): string

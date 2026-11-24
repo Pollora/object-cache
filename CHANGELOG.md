@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The drop-in no longer stops the whole site when the Composer autoloader it names exists but the web server cannot open it: it tested `is_file()` and then `require_once` failed with a fatal error. It tests `is_readable()`, stays inert, and WordPress keeps its own cache.
+
+### Added
+
+- The drop-in says in the PHP error log, by path, when the autoloader it names cannot be read by the web server (for example a package installed with `wp package install`, which lands in the home directory of the user who ran it). Until now the cache stayed off without a word.
+- `status` (`wp object-cache status`, `pollora:object-cache:status`) has an `Autoloader` line: the path, or that there is none, and whether this user can read it. A path in the home directory of the user who runs the command is flagged, since the web server usually cannot read it, and an autoloader that cannot be read makes `status` fail. `status` cannot test the web server's own account.
+
 ## [0.3.0] - 2026-11-24
 
 ### Changed

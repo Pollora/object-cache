@@ -143,3 +143,8 @@ it('writes an empty path when the site has no autoloader to name', function (): 
 
     expect(file_get_contents($this->target))->toContain("\$a = '';");
 });
+
+it('tells the autoloader path it writes, empty when it has none', function (): void {
+    expect((new DropInInstaller($this->source, $this->target, '/srv/site/vendor/autoload.php'))->autoload())->toBe('/srv/site/vendor/autoload.php')
+        ->and((new DropInInstaller($this->source, $this->target))->autoload())->toBe('');
+});
