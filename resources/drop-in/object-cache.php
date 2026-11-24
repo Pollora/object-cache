@@ -17,10 +17,16 @@ declare(strict_types=1);
 use Pollora\ObjectCache\Infrastructure\WordPress\DropIn;
 
 // Written by the installer: the Composer autoloader of the site, for a WordPress that has not loaded it yet.
+// Readable, not just a file: a file the web server may not open would otherwise stop the whole site with a fatal error.
 $pollora_object_cache_autoload = '__POLLORA_OBJECT_CACHE_AUTOLOAD__';
 
-if (! class_exists(DropIn::class, false) && is_file($pollora_object_cache_autoload)) {
-    require_once $pollora_object_cache_autoload;
+if (! class_exists(DropIn::class, false) && $pollora_object_cache_autoload !== '') {
+    if (is_readable($pollora_object_cache_autoload)) {
+        require_once $pollora_object_cache_autoload;
+    } else {
+        // Not silent: the cache stays off, and this is the only place that can say why (`wp object-cache status` runs as another user).
+        error_log('Pollora object cache: the Composer autoloader '.$pollora_object_cache_autoload.' cannot be read by the web server, so WordPress keeps its own in-memory cache. Run `wp object-cache enable` again, or make the path readable.');
+    }
 }
 
 unset($pollora_object_cache_autoload);

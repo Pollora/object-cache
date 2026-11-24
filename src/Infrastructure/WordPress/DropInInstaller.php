@@ -105,6 +105,14 @@ final readonly class DropInInstaller
     }
 
     /**
+     * The path of the Composer autoloader the drop-in loads, or an empty string when it names none.
+     */
+    public function autoload(): string
+    {
+        return $this->autoload;
+    }
+
+    /**
      * The drop-in as it is written: the shipped file, with the path of the autoloader.
      */
     private function render(): string

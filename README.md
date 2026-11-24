@@ -51,12 +51,12 @@ The package needs PHP and phpredis, nothing else: it runs on a classic WordPress
 ```bash
 composer require pollora/object-cache
 wp object-cache enable    # writes object-cache.php in the content directory
-wp object-cache status    # drop-in, phpredis, Redis, key prefix
+wp object-cache status    # drop-in, phpredis, Redis, autoloader, key prefix
 wp object-cache flush     # empties this site's keys, nothing else
 wp object-cache disable   # removes the drop-in
 ```
 
-`enable` and `disable` are idempotent. They only touch a drop-in this package wrote: another object cache's `object-cache.php` is left alone, and `enable --force` replaces it. A drop-in from an older version is updated by running `enable` again. The drop-in carries the path of the site's `vendor/autoload.php`, so a WordPress that does not load Composer's autoloader itself can still find the package.
+`enable` and `disable` are idempotent. They only touch a drop-in this package wrote: another object cache's `object-cache.php` is left alone, and `enable --force` replaces it. A drop-in from an older version is updated by running `enable` again. The drop-in carries the path of the site's `vendor/autoload.php`, so a WordPress that does not load Composer's autoloader itself can still find the package. The web server must be able to read that path: a package installed with `wp package install` lands in the home directory of the user who ran it, which a web request usually cannot open. The drop-in then stays inert, WordPress keeps its own cache, and the PHP error log says so; `status` shows the path and flags one in the home directory.
 
 If phpredis is not loaded, or nothing configures the cache, the drop-in defines nothing and WordPress runs on its own in-memory cache, with no error. If Redis stops answering during a request, the request carries on from its request cache, stops asking Redis, and the failure goes to the PHP error log once.
 

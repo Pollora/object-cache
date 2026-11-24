@@ -85,7 +85,7 @@ it('removes the drop-in, and refuses another cache\'s', function (): void {
 it('shows the status, and fails when the cache does not work', function (): void {
     ($this->command)($this->settings)->status();
 
-    expect($this->output->lines)->toHaveCount(7)
+    expect($this->output->lines)->toHaveCount(8)
         ->and($this->output->lines[0])->toStartWith('Drop-in:')
         ->and($this->output->error)->toBe(['The object cache is not working.']);
 });

@@ -90,6 +90,58 @@ it('says nothing was emptied when Redis cannot be reached', function (): void {
 });
 
 /**
+ * A manager whose drop-in names the given autoloader, in an environment of the given home directory.
+ */
+function managerWithAutoload(string $dir, string $source, string $autoload, ?string $home = null): Manager
+{
+    return new Manager(new DropInInstaller($source, $dir.'/object-cache.php', $autoload), Environments::make(server: $home === null ? [] : ['HOME' => $home]));
+}
+
+it('says there is no autoloader to load when the drop-in names none', function (): void {
+    $report = $this->manager->status(null);
+
+    expect($report->lines['Autoloader'])->toBe('none (WordPress must load the package itself)');
+});
+
+it('names a readable autoloader, and does not blame a home directory it is not in', function (): void {
+    $autoload = $this->dir.'/vendor/autoload.php';
+    mkdir($this->dir.'/vendor');
+    file_put_contents($autoload, '<?php');
+    $elsewhere = managerWithAutoload($this->dir, $this->source, $autoload, '/home/someone-else');
+    $nowhere = managerWithAutoload($this->dir, $this->source, $autoload);
+
+    expect($elsewhere->status(null)->lines['Autoloader'])->toBe($autoload)
+        ->and($nowhere->status(null)->lines['Autoloader'])->toBe($autoload)
+        ->and(managerWithAutoload($this->dir, $this->source, $autoload, '')->status(null)->lines['Autoloader'])->toBe($autoload);
+});
+
+it('warns about an autoloader in the home directory, where the web server usually cannot read', function (): void {
+    $autoload = $this->dir.'/home/vendor/autoload.php';
+    mkdir($this->dir.'/home/vendor', 0777, true);
+    file_put_contents($autoload, '<?php');
+
+    $inHome = managerWithAutoload($this->dir, $this->source, $autoload, $this->dir.'/home')->status(null)->lines['Autoloader'];
+    $slash = managerWithAutoload($this->dir, $this->source, $autoload, $this->dir.'/home/')->status(null)->lines['Autoloader'];
+    $sibling = managerWithAutoload($this->dir, $this->source, $autoload, $this->dir.'/hom')->status(null)->lines['Autoloader'];
+
+    expect($inHome)->toBe($autoload.' (in the home directory: the web server must be able to read it, or the cache stays off without an error)')
+        ->and($slash)->toBe($inHome)
+        ->and($sibling)->toBe($autoload);
+});
+
+it('is not healthy when the autoloader it names cannot be read', function (): void {
+    (new RedisHarness)->store();
+    $manager = managerWithAutoload($this->dir, $this->source, $this->dir.'/gone/autoload.php');
+    $manager->enable();
+    $report = $manager->status(liveSettings());
+
+    expect($report->lines['Autoloader'])->toBe($this->dir.'/gone/autoload.php (not readable by this user)')
+        ->and($report->lines['Redis'])->toStartWith('reachable')
+        ->and($report->lines['Drop-in'])->toStartWith('current')
+        ->and($report->healthy)->toBeFalse();
+});
+
+/**
  * A package directory under a vendor directory, with a drop-in to ship; the test directory holds it all.
  */
 function packageUnder(string $base, bool $underVendor): string
