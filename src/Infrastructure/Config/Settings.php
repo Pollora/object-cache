@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Pollora\ObjectCache\Infrastructure\Config;
 
 use Pollora\ObjectCache\Infrastructure\Redis\ValueCodec;
+use Stringable;
 
 /**
  * What the object cache is configured with, read from a plain array.
@@ -50,14 +51,14 @@ final readonly class Settings
         return new self(
             self::redis(is_array($config['redis'] ?? null) ? $config['redis'] : []),
             is_string($prefix) && trim($prefix) !== '' ? $prefix : null,
-            (string) ($config['serializer'] ?? ValueCodec::SERIALIZER_PHP),
+            self::text($config['serializer'] ?? null, ValueCodec::SERIALIZER_PHP),
             is_array($allowed) ? self::names($allowed) : (bool) $allowed,
-            (int) ($config['max_ttl'] ?? 0),
+            self::integer($config['max_ttl'] ?? null, 0),
             self::names($config['global_groups'] ?? []),
             self::names($config['non_persistent_groups'] ?? []),
             (bool) ($prefetch['enabled'] ?? false),
-            (int) ($prefetch['max_keys'] ?? 300),
-            (int) ($prefetch['ttl'] ?? 604800),
+            self::integer($prefetch['max_keys'] ?? null, 300),
+            self::integer($prefetch['ttl'] ?? null, 604800),
             self::names($prefetch['exclude_groups'] ?? ['userlogins']),
         );
     }
@@ -75,14 +76,14 @@ final readonly class Settings
         }
 
         $parameters = [
-            'host' => (string) ($redis['host'] ?? '127.0.0.1'),
-            'port' => (int) ($redis['port'] ?? 6379),
+            'host' => self::text($redis['host'] ?? null, '127.0.0.1'),
+            'port' => self::integer($redis['port'] ?? null, 6379),
             'path' => $redis['path'] ?? null,
             'username' => $redis['username'] ?? null,
             'password' => $redis['password'] ?? null,
-            'database' => (int) ($redis['database'] ?? 0),
-            'connect_timeout' => (float) ($redis['connect_timeout'] ?? 1.0),
-            'read_timeout' => (float) ($redis['read_timeout'] ?? 1.0),
+            'database' => self::integer($redis['database'] ?? null, 0),
+            'connect_timeout' => self::seconds($redis['connect_timeout'] ?? null),
+            'read_timeout' => self::seconds($redis['read_timeout'] ?? null),
             'persistent' => (bool) ($redis['persistent'] ?? false),
         ];
 
@@ -110,6 +111,30 @@ final readonly class Settings
             'password' => isset($parts['pass']) ? urldecode($parts['pass']) : null,
             'database' => isset($parts['path']) && ctype_digit(ltrim($parts['path'], '/')) ? (int) ltrim($parts['path'], '/') : null,
         ], static fn (mixed $value): bool => $value !== null);
+    }
+
+    /**
+     * A setting read as text; the default when it is missing or has no text form.
+     */
+    private static function text(mixed $value, string $default): string
+    {
+        return is_scalar($value) || $value instanceof Stringable ? (string) $value : $default;
+    }
+
+    /**
+     * A setting read as a whole number; the default when it is missing or not a scalar.
+     */
+    private static function integer(mixed $value, int $default): int
+    {
+        return is_scalar($value) ? (int) $value : $default;
+    }
+
+    /**
+     * A timeout; one second when it is missing or not a scalar.
+     */
+    private static function seconds(mixed $value): float
+    {
+        return is_scalar($value) ? (float) $value : 1.0;
     }
 
     /**

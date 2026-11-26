@@ -38,7 +38,11 @@ final readonly class Environment
      */
     public static function current(): self
     {
-        $constant = static fn (string $name): ?string => defined($name) && is_string(constant($name)) ? constant($name) : null;
+        $constant = static function (string $name): ?string {
+            $value = defined($name) ? constant($name) : null;
+
+            return is_string($value) ? $value : null;
+        };
         $table = $GLOBALS['table_prefix'] ?? '';
         $content = $constant('WP_CONTENT_DIR') ?? ($constant('ABSPATH') !== null ? $constant('ABSPATH').'wp-content' : null);
 

@@ -328,3 +328,10 @@ it('skips a key that cannot be one in a multiple delete, after reporting it', fu
     expect($this->cache->delete_multiple([['nested'], 'a'], 'group'))->toBe(['a' => true])
         ->and($reports)->toBe(1);
 });
+
+it('takes a step that is not a scalar for none', function (): void {
+    $this->cache->set('n', 5, 'g');
+
+    expect($this->cache->incr('n', ['3'], 'g'))->toBe(5)
+        ->and($this->cache->decr('n', null, 'g'))->toBe(5);
+});

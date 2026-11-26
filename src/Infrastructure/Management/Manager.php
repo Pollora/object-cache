@@ -131,8 +131,9 @@ final readonly class Manager
 
         try {
             $info = (new PhpRedisConnector($settings->redis))->connect()->info('server');
+            $version = is_array($info) ? ($info['redis_version'] ?? null) : null;
 
-            return 'reachable'.(is_array($info) && isset($info['redis_version']) ? ' (Redis '.$info['redis_version'].')' : '');
+            return 'reachable'.(is_scalar($version) ? ' (Redis '.$version.')' : '');
         } catch (StoreUnavailableException|RedisException $exception) {
             return 'unreachable: '.$exception->getMessage();
         }

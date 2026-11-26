@@ -108,3 +108,9 @@ it('gives AUTH the password alone, or the user and the password of an ACL user, 
         ->and(PhpRedisConnector::credentials(['username' => 'cache']))->toBeNull()
         ->and(PhpRedisConnector::credentials([]))->toBeNull();
 });
+
+it('reads a numeric credential as text, and one without a text form as missing', function (): void {
+    expect(PhpRedisConnector::credentials(['password' => 1234, 'username' => 5]))->toBe(['5', '1234'])
+        ->and(PhpRedisConnector::credentials(['password' => ['secret']]))->toBeNull()
+        ->and(PhpRedisConnector::credentials(['password' => 'secret', 'username' => ['cache']]))->toBe('secret');
+});
