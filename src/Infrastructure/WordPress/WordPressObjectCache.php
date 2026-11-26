@@ -158,7 +158,12 @@ final class WordPressObjectCache
         $result = [];
 
         foreach ($keys as $key) {
-            $result[$key] = $this->delete($key, $group);
+            $deleted = $this->delete($key, $group);
+
+            // A key that cannot index the result (reported by delete()) has no entry, as in get_multiple().
+            if (is_int($key) || is_string($key)) {
+                $result[$key] = $deleted;
+            }
         }
 
         return $result;
