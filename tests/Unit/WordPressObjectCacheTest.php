@@ -316,3 +316,15 @@ it('reads a single key and a text force flag in a multiple read without a warnin
 
     expect($single)->toBe(['a' => 1]);
 });
+
+it('skips a key that cannot be one in a multiple delete, after reporting it', function (): void {
+    $reports = 0;
+    Functions\when('_doing_it_wrong')->alias(function () use (&$reports): void {
+        $reports++;
+    });
+
+    $this->cache->set('a', 1, 'group');
+
+    expect($this->cache->delete_multiple([['nested'], 'a'], 'group'))->toBe(['a' => true])
+        ->and($reports)->toBe(1);
+});
