@@ -114,3 +114,15 @@ it('reads a numeric credential as text, and one without a text form as missing',
         ->and(PhpRedisConnector::credentials(['password' => ['secret']]))->toBeNull()
         ->and(PhpRedisConnector::credentials(['password' => 'secret', 'username' => ['cache']]))->toBe('secret');
 });
+
+it('takes a credential from an object with a text form', function (): void {
+    $password = new class implements Stringable
+    {
+        public function __toString(): string
+        {
+            return 'secret';
+        }
+    };
+
+    expect(PhpRedisConnector::credentials(['password' => $password]))->toBe('secret');
+});
