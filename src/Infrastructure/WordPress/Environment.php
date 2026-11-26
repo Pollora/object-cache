@@ -47,8 +47,8 @@ final readonly class Environment
         $content = $constant('WP_CONTENT_DIR') ?? ($constant('ABSPATH') !== null ? $constant('ABSPATH').'wp-content' : null);
 
         return new self(
-            $_SERVER,
-            $_COOKIE,
+            array_filter($_SERVER, is_string(...), ARRAY_FILTER_USE_KEY),
+            array_filter($_COOKIE, is_string(...), ARRAY_FILTER_USE_KEY),
             PHP_SAPI,
             defined('WP_ADMIN') || defined('DOING_AJAX') || defined('DOING_CRON') || defined('REST_REQUEST') || defined('XMLRPC_REQUEST'),
             $constant('WP_CACHE_KEY_SALT'),

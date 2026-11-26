@@ -65,8 +65,11 @@ final readonly class PhpRedisConnector implements RedisConnector
             $redis->setOption(Redis::OPT_SCAN, Redis::SCAN_RETRY);
             $redis->setOption(Redis::OPT_READ_TIMEOUT, $readTimeout);
 
-            if (defined('Redis::OPT_THROW_ON_ERROR')) {
-                $redis->setOption(Redis::OPT_THROW_ON_ERROR, true);
+            // Not every phpredis build has the option, so it is read by name.
+            $throwOnError = defined('Redis::OPT_THROW_ON_ERROR') ? constant('Redis::OPT_THROW_ON_ERROR') : null;
+
+            if (is_int($throwOnError)) {
+                $redis->setOption($throwOnError, true);
             }
         } catch (RedisException $redisException) {
             throw new StoreUnavailableException($redisException->getMessage(), 0, $redisException);
