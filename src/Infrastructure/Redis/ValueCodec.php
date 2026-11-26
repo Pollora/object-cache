@@ -31,7 +31,7 @@ final readonly class ValueCodec
 
     /**
      * @param  string  $serializer  How arrays and objects are written: `php` or `igbinary`.
-     * @param  bool|list<class-string>  $allowedClasses  The classes `unserialize()` may build: true for any, false for none, or a list.
+     * @param  bool|list<string>  $allowedClasses  The classes `unserialize()` may build: true for any, false for none, or a list.
      *
      * @throws InvalidArgumentException When the serializer is unknown, or igbinary is chosen without the extension.
      */

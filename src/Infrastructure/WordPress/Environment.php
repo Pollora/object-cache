@@ -38,13 +38,17 @@ final readonly class Environment
      */
     public static function current(): self
     {
-        $constant = static fn (string $name): ?string => defined($name) && is_string(constant($name)) ? constant($name) : null;
+        $constant = static function (string $name): ?string {
+            $value = defined($name) ? constant($name) : null;
+
+            return is_string($value) ? $value : null;
+        };
         $table = $GLOBALS['table_prefix'] ?? '';
         $content = $constant('WP_CONTENT_DIR') ?? ($constant('ABSPATH') !== null ? $constant('ABSPATH').'wp-content' : null);
 
         return new self(
-            $_SERVER,
-            $_COOKIE,
+            array_filter($_SERVER, is_string(...), ARRAY_FILTER_USE_KEY),
+            array_filter($_COOKIE, is_string(...), ARRAY_FILTER_USE_KEY),
             PHP_SAPI,
             defined('WP_ADMIN') || defined('DOING_AJAX') || defined('DOING_CRON') || defined('REST_REQUEST') || defined('XMLRPC_REQUEST'),
             $constant('WP_CACHE_KEY_SALT'),

@@ -27,7 +27,7 @@ final class IncompleteObjects
     }
 
     /**
-     * @param  SplObjectStorage<object, null>  $seen  Objects already visited, so a cycle ends.
+     * @param  SplObjectStorage<object, mixed>  $seen  Objects already visited, so a cycle ends.
      */
     private static function search(mixed $value, SplObjectStorage $seen): bool
     {

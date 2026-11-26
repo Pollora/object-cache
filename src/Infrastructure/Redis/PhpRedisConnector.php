@@ -7,6 +7,7 @@ namespace Pollora\ObjectCache\Infrastructure\Redis;
 use Pollora\ObjectCache\Domain\Exceptions\StoreUnavailableException;
 use Redis;
 use RedisException;
+use Stringable;
 
 /**
  * Connects with phpredis, on a client of its own.
@@ -64,8 +65,11 @@ final readonly class PhpRedisConnector implements RedisConnector
             $redis->setOption(Redis::OPT_SCAN, Redis::SCAN_RETRY);
             $redis->setOption(Redis::OPT_READ_TIMEOUT, $readTimeout);
 
-            if (defined('Redis::OPT_THROW_ON_ERROR')) {
-                $redis->setOption(Redis::OPT_THROW_ON_ERROR, true);
+            // Not every phpredis build has the option, so it is read by name.
+            $throwOnError = defined('Redis::OPT_THROW_ON_ERROR') ? constant('Redis::OPT_THROW_ON_ERROR') : null;
+
+            if (is_int($throwOnError)) {
+                $redis->setOption($throwOnError, true);
             }
         } catch (RedisException $redisException) {
             throw new StoreUnavailableException($redisException->getMessage(), 0, $redisException);
@@ -94,14 +98,22 @@ final readonly class PhpRedisConnector implements RedisConnector
      */
     public static function credentials(array $config): string|array|null
     {
-        $password = $config['password'] ?? null;
+        $password = self::text($config['password'] ?? null);
 
-        if ($password === null || $password === '') {
+        if ($password === '') {
             return null;
         }
 
-        $username = $config['username'] ?? null;
+        $username = self::text($config['username'] ?? null);
 
-        return $username === null || $username === '' ? (string) $password : [(string) $username, (string) $password];
+        return $username === '' ? $password : [$username, $password];
+    }
+
+    /**
+     * A credential as text; empty when it is missing or has no text form.
+     */
+    private static function text(mixed $value): string
+    {
+        return is_scalar($value) || $value instanceof Stringable ? (string) $value : '';
     }
 }

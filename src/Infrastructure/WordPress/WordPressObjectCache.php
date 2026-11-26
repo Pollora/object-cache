@@ -40,7 +40,7 @@ final class WordPressObjectCache
             return false;
         }
 
-        return $this->cache->add($key, $data, self::group($group), (int) $expire);
+        return $this->cache->add($key, $data, self::group($group), self::number($expire));
     }
 
     /**
@@ -65,7 +65,7 @@ final class WordPressObjectCache
      */
     public function replace(mixed $key, mixed $data, mixed $group = 'default', mixed $expire = 0): bool
     {
-        return $this->valid($key, 'replace') && $this->cache->replace($key, $data, self::group($group), (int) $expire);
+        return $this->valid($key, 'replace') && $this->cache->replace($key, $data, self::group($group), self::number($expire));
     }
 
     /**
@@ -73,7 +73,7 @@ final class WordPressObjectCache
      */
     public function set(mixed $key, mixed $data, mixed $group = 'default', mixed $expire = 0): bool
     {
-        return $this->valid($key, 'set') && $this->cache->set($key, $data, self::group($group), (int) $expire);
+        return $this->valid($key, 'set') && $this->cache->set($key, $data, self::group($group), self::number($expire));
     }
 
     /**
@@ -174,7 +174,7 @@ final class WordPressObjectCache
      */
     public function incr(mixed $key, mixed $offset = 1, mixed $group = 'default'): int|float|false
     {
-        return $this->valid($key, 'incr') ? $this->cache->increment($key, (int) $offset, self::group($group)) : false;
+        return $this->valid($key, 'incr') ? $this->cache->increment($key, self::number($offset), self::group($group)) : false;
     }
 
     /**
@@ -182,7 +182,7 @@ final class WordPressObjectCache
      */
     public function decr(mixed $key, mixed $offset = 1, mixed $group = 'default'): int|float|false
     {
-        return $this->valid($key, 'decr') ? $this->cache->decrement($key, (int) $offset, self::group($group)) : false;
+        return $this->valid($key, 'decr') ? $this->cache->decrement($key, self::number($offset), self::group($group)) : false;
     }
 
     /**
@@ -234,7 +234,7 @@ final class WordPressObjectCache
      */
     public function switch_to_blog(mixed $blog_id): void
     {
-        $this->cache->switchToBlog((int) $blog_id);
+        $this->cache->switchToBlog(self::number($blog_id));
     }
 
     /**
@@ -303,6 +303,14 @@ final class WordPressObjectCache
     private static function group(mixed $group): string
     {
         return is_string($group) || is_int($group) ? (string) $group : 'default';
+    }
+
+    /**
+     * A lifetime, step or blog ID as WordPress casts it; 0 for what is not a scalar.
+     */
+    private static function number(mixed $value): int
+    {
+        return is_scalar($value) ? (int) $value : 0;
     }
 
     /**

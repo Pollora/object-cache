@@ -89,3 +89,30 @@ it('reads a URL it cannot parse without a warning', function (): void {
 
     expect($host)->toBe('a.test');
 });
+
+it('falls back to the default for a value that has no scalar form', function (): void {
+    $bad = ['not', 'scalar'];
+    $settings = Settings::fromArray([
+        'redis' => ['host' => $bad, 'port' => $bad, 'database' => $bad, 'connect_timeout' => $bad, 'read_timeout' => $bad],
+        'serializer' => $bad, 'max_ttl' => $bad,
+        'prefetch' => ['max_keys' => $bad, 'ttl' => $bad],
+    ]);
+
+    expect($settings->redis)->toBe(['host' => '127.0.0.1', 'port' => 6379, 'database' => 0, 'connect_timeout' => 1.0, 'read_timeout' => 1.0, 'persistent' => false])
+        ->and($settings->serializer)->toBe('php')
+        ->and($settings->maxTtl)->toBe(0)
+        ->and($settings->prefetchMaxKeys)->toBe(300)
+        ->and($settings->prefetchTtl)->toBe(604800);
+});
+
+it('reads an object with a text form as text', function (): void {
+    $host = new class implements Stringable
+    {
+        public function __toString(): string
+        {
+            return 'r.test';
+        }
+    };
+
+    expect(Settings::fromArray(['redis' => ['host' => $host]])->redis['host'])->toBe('r.test');
+});
