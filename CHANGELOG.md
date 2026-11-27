@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-27
+
 ### Fixed
 
 - `wp_cache_delete_multiple()` given a key that is not an integer or a string (an array, for example) reports it through `_doing_it_wrong()` and carries on; it used to stop the request with a `TypeError` while building its result.
