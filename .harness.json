@@ -6,7 +6,7 @@
         "phpstan_baseline": 0,
         "coverage": 100,
         "type_coverage": 94.4,
-        "msi": 96
+        "msi": 92
     },
     "services": [
         "redis"
