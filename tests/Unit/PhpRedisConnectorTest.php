@@ -126,3 +126,29 @@ it('takes a credential from an object with a text form', function (): void {
 
     expect(PhpRedisConnector::credentials(['password' => $password]))->toBe('secret');
 });
+
+it('raises no PHP warning of its own for a host that does not resolve, and leaves the error handler as it was', function (bool $persistent): void {
+    if (! extension_loaded('redis')) {
+        $this->markTestSkipped('phpredis is not loaded.');
+    }
+
+    $warnings = [];
+    set_error_handler(static function (int $level, string $message) use (&$warnings): bool {
+        $warnings[] = $message;
+
+        return true;
+    });
+
+    try {
+        expect(fn () => (new PhpRedisConnector(['host' => 'no-such-host.invalid', 'connect_timeout' => 0.2, 'persistent' => $persistent]))->connect())
+            ->toThrow(StoreUnavailableException::class);
+
+        expect($warnings)->toBe([]);
+
+        trigger_error('after the connection', E_USER_WARNING);
+
+        expect($warnings)->toBe(['after the connection']);
+    } finally {
+        restore_error_handler();
+    }
+})->with(['connect' => [false], 'pconnect' => [true]]);

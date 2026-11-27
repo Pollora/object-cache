@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A Redis host that does not resolve no longer prints a raw PHP warning (`Redis::connect(): php_network_getaddresses…`) in the console, the logs or, with errors displayed, the page. The cache already degrades to the request cache and says why in the error log.
+
 ## [0.3.2] - 2026-11-27
 
 ### Fixed
