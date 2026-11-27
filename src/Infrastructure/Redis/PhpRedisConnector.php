@@ -46,9 +46,17 @@ final readonly class PhpRedisConnector implements RedisConnector
         $redis = new Redis;
 
         try {
-            $connected = ($this->config['persistent'] ?? false)
-                ? $redis->pconnect($host, $port, $connectTimeout, null, 0, $readTimeout)
-                : $redis->connect($host, $port, $connectTimeout, null, 0, $readTimeout);
+            // A host that does not resolve makes phpredis raise a PHP warning before it throws: the
+            // exception carries the same message, and the warning would reach the page or the console.
+            set_error_handler(static fn (): bool => true, E_WARNING);
+
+            try {
+                $connected = ($this->config['persistent'] ?? false)
+                    ? $redis->pconnect($host, $port, $connectTimeout, null, 0, $readTimeout)
+                    : $redis->connect($host, $port, $connectTimeout, null, 0, $readTimeout);
+            } finally {
+                restore_error_handler();
+            }
 
             // @codeCoverageIgnoreStart
             if (! $connected) {
